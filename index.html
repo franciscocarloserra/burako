@@ -76,7 +76,7 @@
   /* Stealth: looks like a spreadsheet. Toggle with the "xl" pill or Esc */
   #xlhead{display:none}
   body.xl{color-scheme:light;color:#222;font:13px/1.2 Calibri,Carlito,'Segoe UI',Arial,sans-serif;
-    background:#fff repeating-linear-gradient(90deg,transparent 0 63px,#e1e1e1 63px 64px),repeating-linear-gradient(transparent 0 19px,#e1e1e1 19px 20px)}
+    background:repeating-linear-gradient(90deg,transparent 0 63px,#e1e1e1 63px 64px),repeating-linear-gradient(transparent 0 19px,#e1e1e1 19px 20px) #fff}
   .xl #xlhead{display:block;background:#217346;color:#fff;font-size:12px}
   .xl #xlhead div{padding:4px 10px}.xl #xlhead .tabs{display:flex;gap:14px;background:#f3f3f3;color:#333;border-bottom:1px solid #d4d4d4}
   .xl #xlhead .fx{background:#fff;color:#333;border-bottom:1px solid #d4d4d4;font-family:Consolas,monospace}
@@ -130,11 +130,11 @@
 <div id="modal"><div id="mbody"></div></div>
 <script type="module">
 window.onerror = window.onunhandledrejection = e => toast('error: ' + (e.reason || e.message || e));
-import {joinRoom} from './trystero-nostr.mjs?v=2026-10-29.11';
-import * as G from './game.js?v=2026-10-29.11';
-import {botStep} from './bot.js?v=2026-10-29.11';
+import {joinRoom} from './trystero-nostr.mjs?v=2026-10-29.12';
+import * as G from './game.js?v=2026-10-29.12';
+import {botStep} from './bot.js?v=2026-10-29.12';
 
-const VERSION = '2026-10-29.11';
+const VERSION = '2026-10-29.12';
 
 // Tunable parameters
 const P = {
