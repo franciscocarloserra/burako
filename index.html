@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>burako</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{color-scheme:dark;--tw:clamp(30px,8.4vw,46px)}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;height:100dvh;display:flex;flex-direction:column;overflow:hidden;color:#eee;user-select:none;
+    font:15px/1.3 system-ui,sans-serif;background:radial-gradient(ellipse at 50% 40%,#1f6b44 0%,#124029 60%,#0a2618 100%)}
+  #bar{display:flex;gap:8px;align-items:center;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));background:#0008;font-size:13px}
+  #status{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #dot{width:9px;height:9px;border-radius:50%;background:#c33;flex-shrink:0}#dot.on{background:#3c6}
+  .pill{all:unset;cursor:pointer;padding:4px 9px;border-radius:12px;background:#fff1;font-size:12px}
+  #upd{display:none;background:#e0a020;color:#000}
+  main{flex:1;overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:8px}
+  .who{font-size:12px;opacity:.75;display:flex;justify-content:space-between}
+  .backs{display:flex;justify-content:center;height:30px}
+  .back{width:20px;height:28px;margin-left:-9px;border-radius:4px;background:linear-gradient(135deg,#7a2a3a,#4a1020);border:1px solid #b55;box-shadow:0 1px 3px #0008}
+  .melds{display:flex;flex-wrap:wrap;gap:6px;min-height:44px;padding:5px;border-radius:10px;background:#0002;border:1px dashed #fff2}
+  .meld{display:flex;padding:3px;border-radius:7px;background:#0003}
+  .meld .tile{--tw:clamp(20px,6vw,30px);margin-left:-5px}.meld .tile:first-child{margin-left:0}
+  .meld.can{background:#e0b03055;box-shadow:0 0 0 2px #e0b030}.meld.can.clean{background:#fff5;box-shadow:0 0 0 2px #fff}
+  .mine .meld{cursor:pointer}
+  #center{display:flex;justify-content:center;align-items:center;gap:22px;padding:6px 0}
+  .stack{position:relative;text-align:center;font-size:11px;cursor:pointer}
+  .stack .lbl{opacity:.7;margin-top:4px}
+  .bigback{width:46px;height:62px;border-radius:7px;background:repeating-linear-gradient(45deg,#7a2a3a 0 6px,#6a1f30 6px 12px);border:2px solid #d9a0a0;box-shadow:2px 2px 0 #4a1020,4px 4px 0 #3a0c18,0 6px 12px #0009}
+  .muertos{display:flex;gap:4px}.muertos .back{margin:0;width:22px;height:30px}
+  #pozo{display:flex;min-width:46px;min-height:62px;align-items:center}
+  #pozo .tile{margin-left:-28px}#pozo .tile:first-child{margin-left:0}
+  .tile{width:var(--tw);height:calc(var(--tw)*1.38);border-radius:calc(var(--tw)*.16);flex-shrink:0;position:relative;
+    background:linear-gradient(170deg,#fffdf4,#efe4c6);box-shadow:0 2px 0 #c8b88e,0 3px 6px #0007;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:calc(var(--tw)*.55);
+    transition:transform .15s,box-shadow .15s}
+  .tile i{width:calc(var(--tw)*.18);height:calc(var(--tw)*.18);border-radius:50%;background:currentColor;opacity:.85;margin-top:2px}
+  .c0{color:#d0263a}.c1{color:#1d63c9}.c2{color:#1b1b1b}.c3{color:#e58a00}
+  .c4{color:#8a2be2;font-size:calc(var(--tw)*.6)}
+  #hand{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;padding:14px 6px 6px}
+  #hand .tile{cursor:pointer}
+  #hand .tile.sel{transform:translateY(-10px);box-shadow:0 0 0 3px #ffd84a,0 8px 14px #000a}
+  .tile.new{animation:pop .5s}
+  @keyframes pop{from{transform:scale(.3) rotate(-20deg);opacity:0}}
+  #acts{display:flex;gap:6px;padding:8px;padding-bottom:max(8px,env(safe-area-inset-bottom));background:#0008}
+  #acts button{flex:1;padding:12px 0;border:0;border-radius:10px;font:600 14px system-ui;background:#2e7d55;color:#fff}
+  #acts button:disabled{opacity:.35}
+  #acts #chatBtn{flex:0 0 52px;background:#7a2a6a;position:relative}
+  #unread{position:absolute;top:4px;right:6px;background:#f44;border-radius:8px;font-size:10px;padding:0 5px;display:none}
+  #chat{position:fixed;inset:auto 0 0 0;height:60dvh;background:#111e;backdrop-filter:blur(6px);border-radius:14px 14px 0 0;
+    display:flex;flex-direction:column;transform:translateY(100%);transition:transform .25s;z-index:5}
+  #chat.open{transform:none}
+  #msgs{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:5px}
+  .m{max-width:80%;padding:6px 10px;border-radius:12px;background:#333;word-break:break-word;align-self:flex-start}
+  .m.me{align-self:flex-end;background:#2e7d55}
+  #teases{display:flex;gap:6px;overflow-x:auto;padding:6px 10px}
+  #teases button{all:unset;cursor:pointer;flex-shrink:0;padding:6px 10px;border-radius:14px;background:#fff1;font-size:13px}
+  #cf{display:flex;padding:8px;gap:6px;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+  #cf input{flex:1;min-width:0;padding:11px;border-radius:10px;border:0;background:#000;color:#eee;font-size:16px}
+  #cf button{border:0;border-radius:10px;padding:0 14px;background:#2e7d55;color:#fff;font-size:16px}
+  #toast{position:fixed;top:56px;left:50%;transform:translateX(-50%);background:#000c;padding:8px 14px;border-radius:12px;opacity:0;transition:opacity .2s;z-index:9;pointer-events:none;max-width:90vw;text-align:center}
+  #toast.on{opacity:1}
+  .shake{animation:shake .5s}
+  @keyframes shake{20%{transform:translateX(-12px) rotate(-2deg)}40%{transform:translateX(12px) rotate(2deg)}60%{transform:translateX(-8px)}80%{transform:translateX(8px)}}
+  .fly{position:fixed;bottom:20%;font-size:42px;pointer-events:none;z-index:8;animation:fly 2.2s ease-out forwards}
+  @keyframes fly{to{transform:translateY(-60vh) scale(1.6);opacity:0}}
+  #modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:10}
+  #modal.on{display:flex}
+  #modal>div{background:#1b2a22;padding:18px;border-radius:14px;width:min(92vw,360px);display:flex;flex-direction:column;gap:10px}
+  #modal input{padding:11px;border-radius:10px;border:0;background:#000;color:#eee;font-size:16px}
+  #modal button{padding:11px;border:0;border-radius:10px;background:#2e7d55;color:#fff;font:600 15px system-ui}
+  #modal table{width:100%;font-size:13px;border-collapse:collapse}#modal td{padding:3px;text-align:right}#modal td:first-child{text-align:left;opacity:.7}
+</style></head><body>
+<div id="bar"><span id="dot"></span><span id="status">conectando...</span><button class="pill" id="upd">actualizar</button><button class="pill" id="copy">link</button></div>
+<main>
+  <div class="who"><span id="oppName">esperando rival...</span><span id="oppScore"></span></div>
+  <div class="backs" id="oppHand"></div>
+  <div class="melds" id="oppMelds"></div>
+  <div id="center">
+    <div class="stack" id="mazo"><div class="bigback"></div><div class="lbl" id="mazoN"></div></div>
+    <div class="stack" id="pozoBox"><div id="pozo"></div><div class="lbl" id="pozoN">pozo</div></div>
+    <div class="stack"><div class="muertos" id="muertos"></div><div class="lbl">muertos</div></div>
+  </div>
+  <div class="melds mine" id="myMelds"></div>
+  <div class="who"><span id="myName"></span><span id="myScore"></span></div>
+  <div id="hand"></div>
+</main>
+<div id="acts">
+  <button id="bMeld">Bajar</button><button id="bDisc">Tirar</button><button id="bUndo">Deshacer</button><button id="bSort">Ordenar</button>
+  <button id="chatBtn">💬<span id="unread"></span></button>
+</div>
+<div id="chat">
+  <div id="msgs"></div>
+  <div id="teases"></div>
+  <form id="cf"><input id="ct" autocomplete="off" maxlength="200" enterkeyhint="send" placeholder="molestar..."><button>➤</button></form>
+</div>
+<div id="toast"></div>
+<div id="modal"><div id="mbody"></div></div>
+<script type="module">
+window.onerror = window.onunhandledrejection = e => toast('error: ' + (e.reason || e.message || e));
+import {joinRoom} from './trystero-nostr.mjs';
+import * as G from './game.js';
+
+const VERSION = '2026-10-29.1';
+
+// Tunable parameters
+const P = {
+  appId: 'burako-p2p-4d1e8b',
+  relayUrls: ['wss://nos.lol', 'wss://relay.primal.net', 'wss://nostr.mom'],
+  randomBytes: 16,
+  maxPayloadBytes: 65536,
+  maxChat: 100,
+  maxChatLen: 200,
+  versionPollMs: 60000,
+  toastMs: 2200,
+  blipGain: 0.04,
+};
+const TEASES = ['🐢 dale que es para hoy', '😜 te voy a ganar', '👉 pinchar', '💋', '😴', '🤡 jugada de payaso', '🔥 tremenda', '😂'];
+const $ = id => document.getElementById(id);
+
+// Room and password live in the URL hash: #room:password (password encrypts signaling; WebRTC itself is end-to-end)
+const rand = () => [...crypto.getRandomValues(new Uint8Array(P.randomBytes))].map(b => b.toString(16).padStart(2, '0')).join('');
+if (!/^#[^:]+:.+/.test(location.hash)) location.hash = rand() + ':' + rand();
+const [room, ...pw] = decodeURIComponent(location.hash.slice(1)).split(':');
+const KEY = 'burako:' + room;
+
+// Identity is per device (localStorage), so resume works after drops, reloads and redeploys
+let me = localStorage.getItem(KEY + ':me') || rand();
+localStorage.setItem(KEY + ':me', me);
+let myName = localStorage.getItem('burako:name') || '';
+let s = JSON.parse(localStorage.getItem(KEY + ':state') || 'null');
+let chat = JSON.parse(localStorage.getItem(KEY + ':chat') || '[]');
+let sel = new Set(), sortBy = localStorage.getItem('burako:sort') || 'color', seen = new Set(), chatOpen = false, unread = 0;
+
+const cfg = {appId: P.appId, password: pw.join(':')};
+if (P.relayUrls.length) cfg.relayConfig = {urls: P.relayUrls};
+const r = joinRoom(cfg, room);
+const stAct = r.makeAction('st'), chatAct = r.makeAction('chat'), pokeAct = r.makeAction('poke');
+
+const seat = () => s ? s.players.findIndex(p => p.id === me) : -1;
+const save = () => { localStorage.setItem(KEY + ':state', JSON.stringify(s)); localStorage.setItem(KEY + ':chat', JSON.stringify(chat)); };
+const newer = (a, b) => !b || a.v > b.v || (a.v === b.v && a.id < b.id);
+function commit() { s.v++; save(); stAct.send(JSON.stringify(s)); render(); }
+
+function parse(raw) {
+  if (typeof raw !== 'string' || raw.length > P.maxPayloadBytes) return null;
+  try { const o = JSON.parse(raw); return o && typeof o === 'object' && !Array.isArray(o) ? o : null; } catch { return null; }
+}
+
+// Sit down if there is a free seat; the second player to sit deals
+function claim() {
+  if (!myName || !s || seat() >= 0 || s.players.length >= 2) return;
+  s.players.push({id: me, name: myName});
+  if (s.players.length === 2 && s.phase === 'waiting') G.deal(s);
+  commit();
+}
+
+stAct.onMessage = raw => {
+  const o = parse(raw);
+  if (!o || o.schema !== 1 || !Array.isArray(o.players) || !newer(o, s)) return;
+  const myTurnBefore = isMyTurn(), wasOver = s?.phase === 'over';
+  s = o; save(); claim(); render();
+  if (!myTurnBefore && isMyTurn()) blip(660);
+  if (!wasOver && s.phase === 'over') showScore();
+  if (seat() < 0 && s.players.length >= 2 && !$('modal').className) askSeat();
+};
+chatAct.onMessage = raw => {
+  const o = parse(raw);
+  if (Array.isArray(o?.list)) return o.list.forEach(addChat);
+  if (o) { addChat(o); blip(990); }
+};
+pokeAct.onMessage = raw => { const o = parse(raw); if (o && typeof o.e === 'string') tease(o.e.slice(0, 8), o.shake === true); };
+
+r.onPeerJoin = peer => {
+  status();
+  if (s) stAct.send(JSON.stringify(s), {target: peer});
+  if (chat.length) chatAct.send(JSON.stringify({list: chat}), {target: peer});
+};
+r.onPeerLeave = () => status();
+
+function addChat(m) {
+  if (typeof m?.id !== 'string' || typeof m.text !== 'string' || typeof m.from !== 'string' || chat.some(c => c.id === m.id)) return;
+  chat.push({id: m.id, from: m.from.slice(0, 30), by: String(m.by ?? ''), text: m.text.slice(0, P.maxChatLen), ts: +m.ts || 0});
+  chat.sort((a, b) => a.ts - b.ts);
+  while (chat.length > P.maxChat) chat.shift();
+  if (!chatOpen && m.by !== me) unread++;
+  save(); renderChat();
+}
+
+const isMyTurn = () => s && seat() >= 0 && s.turn === seat() && (s.phase === 'draw' || s.phase === 'play');
+
+function play(a) {
+  const err = G.act(s, seat(), a);
+  if (err) { toast(err); return false; }
+  sel.clear(); commit();
+  if (s.phase === 'over') showScore();
+  return true;
+}
+
+// --- rendering
+function tile(id, extra = '') {
+  const d = document.createElement('div'), c = G.color(id);
+  d.className = 'tile c' + c + extra;
+  d.innerHTML = c === 4 ? '★' : G.num(id) + '<i></i>';
+  return d;
+}
+const order = ids => [...ids].sort(sortBy === 'color'
+  ? (a, b) => G.color(a) - G.color(b) || G.num(a) - G.num(b)
+  : (a, b) => G.num(a) - G.num(b) || G.color(a) - G.color(b));
+
+function meldEl(m, i, mine) {
+  const d = document.createElement('div');
+  d.className = 'meld' + (G.isCanasta(m) ? ' can' + (m.w ? '' : ' clean') : '');
+  d.append(...m.t.map(id => tile(id)));
+  if (mine) d.onclick = () => sel.size ? play({type: 'add', meld: i, ids: [...sel]}) : toast('elegí fichas para agregar');
+  return d;
+}
+
+function status() {
+  const peers = Object.keys(r.getPeers()).length;
+  $('dot').className = peers ? 'on' : '';
+  let t;
+  if (!s || s.phase === 'waiting') t = peers ? 'sentándose...' : 'pasale el link a tu rival';
+  else if (s.phase === 'over') t = 'mano terminada · ' + s.log;
+  else if (isMyTurn()) t = s.phase === 'draw' ? 'tu turno: robá del mazo o del pozo' : 'bajá juegos y tirá una';
+  else t = 'turno de ' + (s.players[s.turn]?.name ?? '?') + (peers ? '' : ' (desconectado)');
+  $('status').textContent = t + (s?.log && s.phase !== 'over' ? ' · ' + s.log : '');
+}
+
+function render() {
+  status();
+  const p = seat(), o = 1 - p;
+  if (!s || p < 0) return;
+  const opp = s.players[o];
+  $('oppName').textContent = opp ? opp.name + (s.muerto[o] ? ' · con muerto' : '') : 'esperando rival...';
+  $('myName').textContent = myName + (s.muerto[p] ? ' · con muerto' : '');
+  $('oppScore').textContent = opp ? s.scores[o] + ' pts' : '';
+  $('myScore').textContent = s.scores[p] + ' pts';
+  $('oppHand').replaceChildren(...s.hands[o].map(() => Object.assign(document.createElement('div'), {className: 'back'})));
+  $('oppMelds').replaceChildren(...s.melds[o].map((m, i) => meldEl(m, i, false)));
+  $('myMelds').replaceChildren(...s.melds[p].map((m, i) => meldEl(m, i, true)));
+  $('mazoN').textContent = 'mazo ' + s.mazo.length;
+  $('pozo').replaceChildren(...s.pozo.slice(-5).map(id => tile(id)));
+  $('pozoN').textContent = 'pozo ' + s.pozo.length;
+  $('muertos').replaceChildren(...s.muertos.map(() => Object.assign(document.createElement('div'), {className: 'back'})));
+  for (const id of sel) if (!s.hands[p].includes(id)) sel.delete(id);
+  $('hand').replaceChildren(...order(s.hands[p]).map(id => {
+    const d = tile(id, (sel.has(id) ? ' sel' : '') + (seen.size && !seen.has(id) ? ' new' : ''));
+    d.onclick = () => { sel.has(id) ? sel.delete(id) : sel.add(id); render(); };
+    return d;
+  }));
+  seen = new Set(s.hands[p]);
+  const play_ = isMyTurn() && s.phase === 'play';
+  $('bMeld').disabled = !play_ || sel.size < 3;
+  $('bDisc').disabled = !play_ || sel.size !== 1;
+  $('bUndo').disabled = !play_;
+  $('bSort').textContent = sortBy === 'color' ? 'Por color' : 'Por número';
+}
+
+function renderChat() {
+  $('msgs').replaceChildren(...chat.map(m => {
+    const d = document.createElement('div');
+    d.className = 'm' + (m.by === me ? ' me' : '');
+    d.textContent = (m.by === me ? '' : m.from + ': ') + m.text;
+    return d;
+  }));
+  $('msgs').scrollTop = $('msgs').scrollHeight;
+  $('unread').textContent = unread;
+  $('unread').style.display = unread ? 'block' : 'none';
+  const last = chat.at(-1);
+  if (!chatOpen && last && last.by !== me && Date.now() - last.ts < 5000) toast(last.from + ': ' + last.text);
+}
+
+function showScore() {
+  const rows = ['juegos', 'canastas', 'cierre', 'mano', 'muerto', 'total'];
+  const L = s.last || [{}, {}];
+  $('mbody').innerHTML = '<b>Mano ' + s.round + '</b><table><tr><td></td>' + s.players.map(p => '<td></td>').join('') + '</tr>'
+    + rows.map(k => '<tr><td>' + k + '</td>' + L.map(x => '<td>' + (x[k] ?? '') + '</td>').join('') + '</tr>').join('')
+    + '<tr><td>acumulado</td>' + s.scores.map(x => '<td><b>' + x + '</b></td>').join('') + '</tr></table>';
+  const tds = $('mbody').querySelectorAll('tr:first-child td');
+  s.players.forEach((p, i) => tds[i + 1].textContent = p.name);
+  const b = Object.assign(document.createElement('button'), {textContent: 'Nueva mano'});
+  b.onclick = () => { $('modal').className = ''; if (s.phase === 'over') play({type: 'next'}); };
+  const c = Object.assign(document.createElement('button'), {textContent: 'Ver mesa'});
+  c.style.background = '#444';
+  c.onclick = () => $('modal').className = '';
+  $('mbody').append(b, c);
+  $('modal').className = 'on';
+}
+
+// Seat taken by someone else: let a device that lost its storage take over a seat
+function askSeat() {
+  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: '¿Quién sos?'}),
+    ...s.players.map(p => {
+      const b = Object.assign(document.createElement('button'), {textContent: 'Soy ' + p.name});
+      b.onclick = () => { me = p.id; myName = p.name; localStorage.setItem(KEY + ':me', me); localStorage.setItem('burako:name', myName); $('modal').className = ''; render(); };
+      return b;
+    }));
+  $('modal').className = 'on';
+}
+
+function askName() {
+  const i = Object.assign(document.createElement('input'), {placeholder: 'tu nombre', maxLength: 20});
+  const b = Object.assign(document.createElement('button'), {textContent: 'Jugar'});
+  b.onclick = () => {
+    const n = i.value.trim();
+    if (!n) return;
+    myName = n; localStorage.setItem('burako:name', n); $('modal').className = '';
+    start();
+  };
+  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: 'Burako'}), i, b);
+  $('modal').className = 'on';
+  i.focus();
+}
+
+function start() {
+  if (!s) { s = G.newState(rand(), {id: me, name: myName}); save(); stAct.send(JSON.stringify(s)); }
+  claim(); render(); renderChat();
+  if (s.phase === 'over') showScore();
+}
+
+// --- fun
+let ac;
+addEventListener('pointerdown', () => { ac ??= new AudioContext(); ac.resume(); });
+function blip(f) {
+  if (!ac || ac.state !== 'running') return;
+  const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+  o.frequency.value = f; g.gain.setValueAtTime(P.blipGain, t); g.gain.exponentialRampToValueAtTime(0.0001, t + .12);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + .12);
+}
+function tease(e, shake) {
+  const d = Object.assign(document.createElement('div'), {className: 'fly', textContent: e});
+  d.style.left = 15 + Math.random() * 70 + 'vw';
+  document.body.append(d); setTimeout(() => d.remove(), 2300);
+  if (shake) { document.body.classList.remove('shake'); void document.body.offsetWidth; document.body.classList.add('shake'); navigator.vibrate?.(200); blip(330); }
+}
+let toastT;
+function toast(t) { $('toast').textContent = t; $('toast').className = 'on'; clearTimeout(toastT); toastT = setTimeout(() => $('toast').className = '', P.toastMs); }
+
+function sendChat(text) {
+  const m = {id: rand(), from: myName, by: me, text, ts: Date.now()};
+  addChat(m); chatAct.send(JSON.stringify(m));
+}
+$('teases').append(...TEASES.map(t => {
+  const b = Object.assign(document.createElement('button'), {textContent: t});
+  b.onclick = () => {
+    const e = [...t][0], shake = t.includes('pinchar');
+    tease(e, false); pokeAct.send(JSON.stringify({e, shake}));
+    if (!shake && t.length > 2) sendChat(t);
+  };
+  return b;
+}));
+$('cf').onsubmit = e => { e.preventDefault(); const t = $('ct').value.trim(); if (t) sendChat(t); $('ct').value = ''; };
+$('chatBtn').onclick = () => { chatOpen = !chatOpen; $('chat').classList.toggle('open', chatOpen); if (chatOpen) unread = 0; renderChat(); };
+document.querySelector('main').onclick = () => { if (chatOpen) $('chatBtn').onclick(); };
+
+// --- table actions
+$('mazo').onclick = () => isMyTurn() && s.phase === 'draw' ? play({type: 'draw'}) : toast(isMyTurn() ? 'ya robaste' : 'no es tu turno');
+$('pozoBox').onclick = () => isMyTurn() && s.phase === 'draw' ? play({type: 'pozo'}) : toast(isMyTurn() ? 'ya robaste' : 'no es tu turno');
+$('bMeld').onclick = () => play({type: 'meld', ids: [...sel]});
+$('bDisc').onclick = () => play({type: 'discard', id: [...sel][0]});
+$('bUndo').onclick = () => play({type: 'undo'});
+$('bSort').onclick = () => { sortBy = sortBy === 'color' ? 'num' : 'color'; localStorage.setItem('burako:sort', sortBy); render(); };
+$('copy').onclick = async () => { await navigator.clipboard.writeText(location.href); toast('link copiado'); };
+
+// New deploys: state lives in localStorage and the peer, so reloading is safe
+setInterval(async () => {
+  try {
+    const v = (await (await fetch('version.txt', {cache: 'no-store'})).text()).trim();
+    if (v && v !== VERSION) $('upd').style.display = 'inline';
+  } catch {}
+}, P.versionPollMs);
+$('upd').onclick = () => location.reload();
+setInterval(status, 3000);
+
+if (!myName) askName();
+else { start(); if (seat() < 0 && s.players.length >= 2) askSeat(); }
+</script></body></html>
