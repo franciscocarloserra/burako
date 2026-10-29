@@ -15,28 +15,27 @@
   #upd{display:none;background:#e0a020;color:#000}
   main{flex:1;overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:8px}
   .who{font-size:12px;opacity:.75;display:flex;justify-content:space-between}
-  .backs{display:flex;justify-content:center;height:30px}
-  .back{width:20px;height:28px;margin-left:-9px;border-radius:4px;background:linear-gradient(135deg,#7a2a3a,#4a1020);border:1px solid #b55;box-shadow:0 1px 3px #0008}
-  .melds{display:flex;flex-wrap:wrap;gap:6px;min-height:44px;padding:5px;border-radius:10px;background:#0002;border:1px dashed #fff2}
-  .meld{display:flex;padding:3px;border-radius:7px;background:#0003}
-  .meld .tile{--tw:clamp(20px,6vw,30px);margin-left:-5px}.meld .tile:first-child{margin-left:0}
+  .backs{display:flex;justify-content:center;align-items:flex-end;height:38px;padding:3px 10px 6px;margin:0 auto;border-radius:6px;background:linear-gradient(#2a2a2a,#111);box-shadow:0 4px 0 #050505,0 6px 10px #0009;min-width:120px}
+  .back{width:16px;height:28px;margin-left:-2px;border-radius:3px;background:linear-gradient(90deg,#d9cdb0,#f4ecd8 40%,#e2d6bb);box-shadow:inset 0 -3px 0 #c4b590,0 1px 2px #0008}
+  .melds{display:flex;flex-wrap:wrap;gap:8px;min-height:48px;padding:6px;border-radius:10px;background:#0002;border:1px dashed #fff2}
+  .meld{display:flex;gap:1px;padding:3px;border-radius:6px}
+  .meld .tile{--tw:clamp(20px,6vw,30px)}
   .meld.can{background:#e0b03055;box-shadow:0 0 0 2px #e0b030}.meld.can.clean{background:#fff5;box-shadow:0 0 0 2px #fff}
   .mine .meld{cursor:pointer}
   #center{display:flex;justify-content:center;align-items:center;gap:22px;padding:6px 0}
   .stack{position:relative;text-align:center;font-size:11px;cursor:pointer}
   .stack .lbl{opacity:.7;margin-top:4px}
-  .bigback{width:46px;height:62px;border-radius:7px;background:repeating-linear-gradient(45deg,#7a2a3a 0 6px,#6a1f30 6px 12px);border:2px solid #d9a0a0;box-shadow:2px 2px 0 #4a1020,4px 4px 0 #3a0c18,0 6px 12px #0009}
-  .muertos{display:flex;gap:4px}.muertos .back{margin:0;width:22px;height:30px}
+  .bigback{width:50px;height:58px;border-radius:5px;background:repeating-linear-gradient(#f1e8d2 0 5px,#c9b98f 5px 6px);box-shadow:0 3px 0 #b5a479,0 8px 12px #0009}
+  .muertos{display:flex;gap:4px}.muertos .back{margin:0;width:24px;height:34px;background:repeating-linear-gradient(#f1e8d2 0 4px,#c9b98f 4px 5px)}
   #pozo{display:flex;min-width:46px;min-height:62px;align-items:center}
   #pozo .tile{margin-left:-28px}#pozo .tile:first-child{margin-left:0}
   .tile{width:var(--tw);height:calc(var(--tw)*1.38);border-radius:calc(var(--tw)*.16);flex-shrink:0;position:relative;
-    background:linear-gradient(170deg,#fffdf4,#efe4c6);box-shadow:0 2px 0 #c8b88e,0 3px 6px #0007;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:calc(var(--tw)*.55);
+    background:linear-gradient(160deg,#fbf5e6,#ece1c4);box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 #d8caa4,0 3px 0 #b9a77c,0 4px 7px #0008;
+    display:flex;align-items:flex-start;justify-content:center;padding-top:calc(var(--tw)*.18);font:900 calc(var(--tw)*.58)/1 'Arial Black',Arial,sans-serif;letter-spacing:-.04em;
     transition:transform .15s,box-shadow .15s}
-  .tile i{width:calc(var(--tw)*.18);height:calc(var(--tw)*.18);border-radius:50%;background:currentColor;opacity:.85;margin-top:2px}
-  .c0{color:#d0263a}.c1{color:#1d63c9}.c2{color:#1b1b1b}.c3{color:#e58a00}
-  .c4{color:#8a2be2;font-size:calc(var(--tw)*.6)}
-  #hand{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;padding:14px 6px 6px}
+  .c0{color:#d8262c}.c1{color:#1d86d6}.c2{color:#151515}.c3{color:#f0b400}
+  .c4{color:#d8262c;font-size:calc(var(--tw)*.62);padding-top:calc(var(--tw)*.22)}
+  #hand{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;padding:14px 8px 12px;border-radius:8px;background:linear-gradient(#262626,#0e0e0e);box-shadow:inset 0 -6px 0 #000,0 5px 0 #050505,0 8px 16px #000a}
   #hand .tile{cursor:pointer}
   #hand .tile.sel{transform:translateY(-10px);box-shadow:0 0 0 3px #ffd84a,0 8px 14px #000a}
   .tile.new{animation:pop .5s}
@@ -100,7 +99,7 @@ window.onerror = window.onunhandledrejection = e => toast('error: ' + (e.reason 
 import {joinRoom} from './trystero-nostr.mjs';
 import * as G from './game.js';
 
-const VERSION = '2026-10-29.1';
+const VERSION = '2026-10-29.2';
 
 // Tunable parameters
 const P = {
@@ -200,7 +199,7 @@ function play(a) {
 function tile(id, extra = '') {
   const d = document.createElement('div'), c = G.color(id);
   d.className = 'tile c' + c + extra;
-  d.innerHTML = c === 4 ? '★' : G.num(id) + '<i></i>';
+  d.textContent = c === 4 ? '☻' : G.num(id);
   return d;
 }
 const order = ids => [...ids].sort(sortBy === 'color'
