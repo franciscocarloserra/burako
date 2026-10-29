@@ -33,11 +33,11 @@
   #pozo{display:flex;min-width:46px;min-height:62px;align-items:center}
   #pozo .tile{margin-left:-28px}#pozo .tile:first-child{margin-left:0}
   .tile{width:var(--tw);height:calc(var(--tw)*1.38);border-radius:calc(var(--tw)*.16);flex-shrink:0;position:relative;
-    background:linear-gradient(160deg,#fbf5e6,#ece1c4);box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 #d8caa4,0 3px 0 #b9a77c,0 4px 7px #0008;
+    background:linear-gradient(160deg,#fffdf7,#f1e9d4);box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 #d8caa4,0 3px 0 #b9a77c,0 4px 7px #0008;
     display:flex;align-items:flex-start;justify-content:center;padding-top:calc(var(--tw)*.18);font:900 calc(var(--tw)*.58)/1 'Arial Black',Arial,sans-serif;letter-spacing:-.04em;
     transition:transform .15s,box-shadow .15s}
-  .c0{color:#d8262c}.c1{color:#1d86d6}.c2{color:#151515}.c3{color:#f0b400}
-  .c4{color:#d8262c;font-size:calc(var(--tw)*.62);padding-top:calc(var(--tw)*.22)}
+  .c0{color:#c8000a}.c1{color:#0050c8}.c2{color:#000}.c3{color:#f2a900;-webkit-text-stroke:1px #7a4a00}
+  .c4{color:#c8000a;font-size:calc(var(--tw)*.62);padding-top:calc(var(--tw)*.22)}
   #hand{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;padding:14px 8px 12px;border-radius:8px;background:linear-gradient(#262626,#0e0e0e);box-shadow:inset 0 -6px 0 #000,0 5px 0 #050505,0 8px 16px #000a}
   #hand .tile{cursor:pointer}
   #hand .tile.sel{transform:translateY(-10px);box-shadow:0 0 0 3px #ffd84a,0 8px 14px #000a}
@@ -103,7 +103,7 @@ import {joinRoom} from './trystero-nostr.mjs';
 import * as G from './game.js';
 import {botStep} from './bot.js';
 
-const VERSION = '2026-10-29.3';
+const VERSION = '2026-10-29.4';
 
 // Tunable parameters
 const P = {
