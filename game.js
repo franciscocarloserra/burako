@@ -71,6 +71,13 @@ export function newState(id, player, n = 2) {
     snap: null, scores: [0, 0], last: null, log: ''};
 }
 
+// Upgrade states saved by older deploys. Only add fields with defaults here; never rename or drop fields.
+export function migrate(s) {
+  if (!s || typeof s !== 'object') return s;
+  s.n ??= 2;
+  return s;
+}
+
 export function deal(s) {
   const deck = shuffle([...Array(108).keys()]);
   s.hands = Array.from({length: seats(s)}, () => deck.splice(0, R.handSize));

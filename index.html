@@ -12,6 +12,8 @@
   #status{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #dot{width:9px;height:9px;border-radius:50%;background:#c33;flex-shrink:0}#dot.on{background:#3c6}
   .pill{all:unset;cursor:pointer;padding:4px 9px;border-radius:12px;background:#fff1;font-size:12px}
+  #lobby{display:none;margin:6px 10px;padding:10px;border-radius:10px;background:#000a;text-align:center;font-size:14px}
+  #lobby.on{display:block}#lobby button{margin:8px 4px 0;padding:8px 14px;border:0;border-radius:10px;background:#2e7d55;color:#fff;font:600 14px system-ui}
   #upd{display:none;background:#e0a020;color:#000}
   main{flex:1;overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:8px}
   .who{font-size:12px;opacity:.75;display:flex;justify-content:space-between}
@@ -72,7 +74,8 @@
   #modal button{padding:11px;border:0;border-radius:10px;background:#2e7d55;color:#fff;font:600 15px system-ui}
   #modal table{width:100%;font-size:13px;border-collapse:collapse}#modal td{padding:3px;text-align:right}#modal td:first-child{text-align:left;opacity:.7}
 </style></head><body>
-<div id="bar"><span id="dot"></span><span id="status">conectando...</span><button class="pill" id="upd">actualizar</button><button class="pill" id="copy">link</button></div>
+<div id="bar"><span id="dot"></span><span id="status">conectando...</span><button class="pill" id="upd">actualizar</button><button class="pill" id="copy">link</button><button class="pill" id="home">inicio</button></div>
+<div id="lobby"><span id="lobbyT"></span><br><button id="lCopy">Copiar link</button><button id="lNew">Partida nueva</button></div>
 <main>
   <div class="others" id="oppHand"></div>
   <div class="who"><span id="oppName">esperando rival...</span><span id="oppScore"></span></div>
@@ -99,11 +102,11 @@
 <div id="modal"><div id="mbody"></div></div>
 <script type="module">
 window.onerror = window.onunhandledrejection = e => toast('error: ' + (e.reason || e.message || e));
-import {joinRoom} from './trystero-nostr.mjs?v=2026-10-29.5';
-import * as G from './game.js?v=2026-10-29.5';
-import {botStep} from './bot.js?v=2026-10-29.5';
+import {joinRoom} from './trystero-nostr.mjs?v=2026-10-29.6';
+import * as G from './game.js?v=2026-10-29.6';
+import {botStep} from './bot.js?v=2026-10-29.6';
 
-const VERSION = '2026-10-29.5';
+const VERSION = '2026-10-29.6';
 
 // Tunable parameters
 const P = {
@@ -135,7 +138,7 @@ if (!ONLINE) { localStorage.setItem(KEY + ':me', 'me'); $('chatBtn').style.displ
 let me = localStorage.getItem(KEY + ':me') || rand();
 localStorage.setItem(KEY + ':me', me);
 let myName = localStorage.getItem('burako:name') || '';
-let s = JSON.parse(localStorage.getItem(KEY + ':state') || 'null');
+let s = G.migrate(JSON.parse(localStorage.getItem(KEY + ':state') || 'null'));
 let chat = JSON.parse(localStorage.getItem(KEY + ':chat') || '[]');
 let sel = new Set(), sortBy = localStorage.getItem('burako:sort') || 'color', seen = new Set(), chatOpen = false, unread = 0;
 
@@ -167,7 +170,7 @@ stAct.onMessage = raw => {
   const o = parse(raw);
   if (!o || o.schema !== 1 || !Array.isArray(o.players) || !newer(o, s)) return;
   const myTurnBefore = isMyTurn(), wasOver = s?.phase === 'over';
-  s = o; save(); claim(); render();
+  s = G.migrate(o); save(); claim(); render();
   if (!myTurnBefore && isMyTurn()) blip(660);
   if (!wasOver && s.phase === 'over') showScore();
   if (seat() < 0 && s.players.length >= 2 && !$('modal').className) askSeat();
@@ -233,6 +236,11 @@ function status() {
   else if (s.phase === 'over') t = 'mano terminada · ' + s.log;
   else if (isMyTurn()) t = s.phase === 'draw' ? 'tu turno: robá del mazo o del pozo' : 'bajá juegos y tirá una';
   else t = 'turno de ' + (s.players[s.turn]?.name ?? '?') + (peers || !ONLINE ? '' : ' (desconectado)');
+  // Online with nobody else here: say so plainly and offer a fresh game
+  const alone = ONLINE && !peers, playing = s && s.phase !== 'waiting';
+  $('lobby').className = alone ? 'on' : '';
+  $('lobbyT').textContent = !playing ? 'Nadie conectado todavía. Pasale el link a tu rival o empezá otra partida.'
+    : 'Tu rival no está conectado. La partida sigue guardada; podés esperarlo o empezar otra.';
   $('status').textContent = t + (s?.log && s.phase !== 'over' ? ' · ' + s.log : '');
 }
 
@@ -408,6 +416,9 @@ setInterval(async () => {
   } catch {}
 }, P.versionPollMs);
 $('upd').onclick = () => location.reload();
+$('home').onclick = () => location.hash = '';
+$('lCopy').onclick = () => $('copy').onclick();
+$('lNew').onclick = () => location.hash = rand() + ':' + rand();
 setInterval(status, 3000);
 
 function menu() {
