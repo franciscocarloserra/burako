@@ -130,11 +130,11 @@
 <div id="modal"><div id="mbody"></div></div>
 <script type="module">
 window.onerror = window.onunhandledrejection = e => toast('error: ' + (e.reason || e.message || e));
-import {joinRoom} from './trystero-nostr.mjs?v=2026-10-29.13';
-import * as G from './game.js?v=2026-10-29.13';
-import {botStep} from './bot.js?v=2026-10-29.13';
+import {joinRoom} from './trystero-nostr.mjs?v=2026-10-29.14';
+import * as G from './game.js?v=2026-10-29.14';
+import {botStep} from './bot.js?v=2026-10-29.14';
 
-const VERSION = '2026-10-29.13';
+const VERSION = '2026-10-29.14';
 
 // Tunable parameters
 const P = {
@@ -152,9 +152,11 @@ const P = {
   cascadeGravity: 0.45,
   cascadeBounce: 0.78,
   cascadeEvery: 7,      // frames between launches
+  aloneAskMs: 60000,    // alone in an old game this long: offer a new one
 };
 const TEASES = ['🐢 dale que es para hoy', '😜 te voy a ganar', '👉 pinchar', '💋', '😴', '🤡 jugada de payaso', '🔥 tremenda', '😂'];
 const $ = id => document.getElementById(id);
+let aloneTimer = 0, aloneAsked = false;
 
 // Online: room and password live in the URL hash #room:password (password encrypts signaling; WebRTC itself is end-to-end).
 // Local practice: #solo (vs bot) or #2v2 (you + bot partner vs two bots).
@@ -272,6 +274,8 @@ function status() {
   // Online with nobody else here: say so plainly and offer a fresh game
   const alone = ONLINE && !peers, playing = s && s.phase !== 'waiting';
   $('lobby').className = alone ? 'on' : '';
+  if (!alone || !playing) clearTimeout(aloneTimer), aloneTimer = 0;
+  else if (!aloneTimer && !aloneAsked) aloneTimer = setTimeout(askAlone, P.aloneAskMs);
   $('lobbyT').textContent = !playing ? 'Nadie conectado todavía. Pasale el link a tu rival o empezá otra partida.'
     : 'Tu rival no está conectado. La partida sigue guardada; podés esperarlo o empezar otra.';
   $('status').textContent = t + (s?.log && s.phase !== 'over' ? ' · ' + s.log : '');
@@ -424,6 +428,17 @@ function askSeat() {
       b.onclick = () => { me = p.id; myName = p.name; localStorage.setItem(KEY + ':me', me); localStorage.setItem('burako:name', myName); $('modal').className = ''; render(); };
       return b;
     }));
+  $('modal').className = 'on';
+}
+
+function askAlone() {
+  if ($('modal').className) return aloneTimer = setTimeout(askAlone, P.aloneAskMs);
+  aloneAsked = true;
+  const n = Object.assign(document.createElement('button'), {textContent: 'Partida nueva'});
+  const w = Object.assign(document.createElement('button'), {textContent: 'Seguir esperando'});
+  n.onclick = () => location.hash = rand() + ':' + rand();
+  w.onclick = () => $('modal').className = '';
+  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: 'Tu rival no aparece'}), n, w);
   $('modal').className = 'on';
 }
 
