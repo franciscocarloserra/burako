@@ -15,6 +15,9 @@
   #upd{display:none;background:#e0a020;color:#000}
   main{flex:1;overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:8px}
   .who{font-size:12px;opacity:.75;display:flex;justify-content:space-between}
+  .others{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+  .rack{text-align:center;font-size:11px;opacity:.85}.rack.turn{opacity:1;color:#ffd84a}
+  .n4 .back{width:9px}
   .backs{display:flex;justify-content:center;align-items:flex-end;height:38px;padding:3px 10px 6px;margin:0 auto;border-radius:6px;background:linear-gradient(#2a2a2a,#111);box-shadow:0 4px 0 #050505,0 6px 10px #0009;min-width:120px}
   .back{width:16px;height:28px;margin-left:-2px;border-radius:3px;background:linear-gradient(90deg,#d9cdb0,#f4ecd8 40%,#e2d6bb);box-shadow:inset 0 -3px 0 #c4b590,0 1px 2px #0008}
   .melds{display:flex;flex-wrap:wrap;gap:8px;min-height:48px;padding:6px;border-radius:10px;background:#0002;border:1px dashed #fff2}
@@ -71,8 +74,8 @@
 </style></head><body>
 <div id="bar"><span id="dot"></span><span id="status">conectando...</span><button class="pill" id="upd">actualizar</button><button class="pill" id="copy">link</button></div>
 <main>
+  <div class="others" id="oppHand"></div>
   <div class="who"><span id="oppName">esperando rival...</span><span id="oppScore"></span></div>
-  <div class="backs" id="oppHand"></div>
   <div class="melds" id="oppMelds"></div>
   <div id="center">
     <div class="stack" id="mazo"><div class="bigback"></div><div class="lbl" id="mazoN"></div></div>
@@ -98,8 +101,9 @@
 window.onerror = window.onunhandledrejection = e => toast('error: ' + (e.reason || e.message || e));
 import {joinRoom} from './trystero-nostr.mjs';
 import * as G from './game.js';
+import {botStep} from './bot.js';
 
-const VERSION = '2026-10-29.2';
+const VERSION = '2026-10-29.3';
 
 // Tunable parameters
 const P = {
@@ -112,15 +116,20 @@ const P = {
   versionPollMs: 60000,
   toastMs: 2200,
   blipGain: 0.04,
+  botMs: 700,
 };
 const TEASES = ['🐢 dale que es para hoy', '😜 te voy a ganar', '👉 pinchar', '💋', '😴', '🤡 jugada de payaso', '🔥 tremenda', '😂'];
 const $ = id => document.getElementById(id);
 
-// Room and password live in the URL hash: #room:password (password encrypts signaling; WebRTC itself is end-to-end)
+// Online: room and password live in the URL hash #room:password (password encrypts signaling; WebRTC itself is end-to-end).
+// Local practice: #solo (vs bot) or #2v2 (you + bot partner vs two bots).
 const rand = () => [...crypto.getRandomValues(new Uint8Array(P.randomBytes))].map(b => b.toString(16).padStart(2, '0')).join('');
-if (!/^#[^:]+:.+/.test(location.hash)) location.hash = rand() + ':' + rand();
+const MODE = location.hash === '#solo' ? 'solo' : location.hash === '#2v2' ? '2v2' : /^#[^:]+:.+/.test(location.hash) ? 'online' : 'menu';
+const ONLINE = MODE === 'online';
+addEventListener('hashchange', () => location.reload());
 const [room, ...pw] = decodeURIComponent(location.hash.slice(1)).split(':');
-const KEY = 'burako:' + room;
+const KEY = 'burako:' + (ONLINE ? room : MODE);
+if (!ONLINE) { localStorage.setItem(KEY + ':me', 'me'); $('chatBtn').style.display = $('copy').style.display = 'none'; }
 
 // Identity is per device (localStorage), so resume works after drops, reloads and redeploys
 let me = localStorage.getItem(KEY + ':me') || rand();
@@ -132,7 +141,8 @@ let sel = new Set(), sortBy = localStorage.getItem('burako:sort') || 'color', se
 
 const cfg = {appId: P.appId, password: pw.join(':')};
 if (P.relayUrls.length) cfg.relayConfig = {urls: P.relayUrls};
-const r = joinRoom(cfg, room);
+const noop = {send() {}};
+const r = ONLINE ? joinRoom(cfg, room) : {getPeers: () => ({}), makeAction: () => noop};
 const stAct = r.makeAction('st'), chatAct = r.makeAction('chat'), pokeAct = r.makeAction('poke');
 
 const seat = () => s ? s.players.findIndex(p => p.id === me) : -1;
@@ -147,7 +157,7 @@ function parse(raw) {
 
 // Sit down if there is a free seat; the second player to sit deals
 function claim() {
-  if (!myName || !s || seat() >= 0 || s.players.length >= 2) return;
+  if (!ONLINE || !myName || !s || seat() >= 0 || s.players.length >= 2) return;
   s.players.push({id: me, name: myName});
   if (s.players.length === 2 && s.phase === 'waiting') G.deal(s);
   commit();
@@ -218,25 +228,33 @@ function status() {
   const peers = Object.keys(r.getPeers()).length;
   $('dot').className = peers ? 'on' : '';
   let t;
+  if (!ONLINE) $('dot').className = 'on';
   if (!s || s.phase === 'waiting') t = peers ? 'sentándose...' : 'pasale el link a tu rival';
   else if (s.phase === 'over') t = 'mano terminada · ' + s.log;
   else if (isMyTurn()) t = s.phase === 'draw' ? 'tu turno: robá del mazo o del pozo' : 'bajá juegos y tirá una';
-  else t = 'turno de ' + (s.players[s.turn]?.name ?? '?') + (peers ? '' : ' (desconectado)');
+  else t = 'turno de ' + (s.players[s.turn]?.name ?? '?') + (peers || !ONLINE ? '' : ' (desconectado)');
   $('status').textContent = t + (s?.log && s.phase !== 'over' ? ' · ' + s.log : '');
 }
 
 function render() {
   status();
-  const p = seat(), o = 1 - p;
+  const p = seat();
   if (!s || p < 0) return;
-  const opp = s.players[o];
-  $('oppName').textContent = opp ? opp.name + (s.muerto[o] ? ' · con muerto' : '') : 'esperando rival...';
-  $('myName').textContent = myName + (s.muerto[p] ? ' · con muerto' : '');
-  $('oppScore').textContent = opp ? s.scores[o] + ' pts' : '';
-  $('myScore').textContent = s.scores[p] + ' pts';
-  $('oppHand').replaceChildren(...s.hands[o].map(() => Object.assign(document.createElement('div'), {className: 'back'})));
+  const t = G.team(p), o = 1 - t, n = s.n ?? 2, back = () => Object.assign(document.createElement('div'), {className: 'back'});
+  document.body.classList.toggle('n4', n === 4);
+  $('oppName').textContent = s.players.length > 1 ? teamName(o) + (s.muerto[o] ? ' · con muerto' : '') : 'esperando rival...';
+  $('myName').textContent = teamName(t) + (s.muerto[t] ? ' · con muerto' : '');
+  $('oppScore').textContent = s.players.length > 1 ? s.scores[o] + ' pts' : '';
+  $('myScore').textContent = s.scores[t] + ' pts';
+  $('oppHand').replaceChildren(...[...Array(n).keys()].filter(q => q !== p && s.players[q]).map(q => {
+    const w = Object.assign(document.createElement('div'), {className: 'rack' + (s.turn === q ? ' turn' : '')});
+    const b = Object.assign(document.createElement('div'), {className: 'backs'});
+    b.append(...s.hands[q].map(back));
+    w.append(s.players[q].name + (G.team(q) === t ? ' (compa)' : ''), b);
+    return w;
+  }));
   $('oppMelds').replaceChildren(...s.melds[o].map((m, i) => meldEl(m, i, false)));
-  $('myMelds').replaceChildren(...s.melds[p].map((m, i) => meldEl(m, i, true)));
+  $('myMelds').replaceChildren(...s.melds[t].map((m, i) => meldEl(m, i, true)));
   $('mazoN').textContent = 'mazo ' + s.mazo.length;
   $('pozo').replaceChildren(...s.pozo.slice(-5).map(id => tile(id)));
   $('pozoN').textContent = 'pozo ' + s.pozo.length;
@@ -253,6 +271,21 @@ function render() {
   $('bDisc').disabled = !play_ || sel.size !== 1;
   $('bUndo').disabled = !play_;
   $('bSort').textContent = sortBy === 'color' ? 'Por color' : 'Por número';
+  botLoop();
+}
+const teamName = T => s.players.filter((_, q) => G.team(q) === T).map(x => x.name).join(' + ');
+
+// Local modes: bots play their turns with a small delay so moves are visible
+let botT = null;
+function botLoop() {
+  const q = s?.turn;
+  if (ONLINE || botT || !s.players[q]?.bot || (s.phase !== 'draw' && s.phase !== 'play')) return;
+  botT = setTimeout(() => {
+    botT = null;
+    if (G.act(s, q, botStep(s, q))) G.act(s, q, {type: 'discard', id: s.hands[q].at(-1)});
+    commit();
+    if (s.phase === 'over') showScore();
+  }, P.botMs);
 }
 
 function renderChat() {
@@ -272,11 +305,11 @@ function renderChat() {
 function showScore() {
   const rows = ['juegos', 'canastas', 'cierre', 'mano', 'muerto', 'total'];
   const L = s.last || [{}, {}];
-  $('mbody').innerHTML = '<b>Mano ' + s.round + '</b><table><tr><td></td>' + s.players.map(p => '<td></td>').join('') + '</tr>'
+  $('mbody').innerHTML = '<b>Mano ' + s.round + '</b><table><tr><td></td><td></td><td></td></tr>'
     + rows.map(k => '<tr><td>' + k + '</td>' + L.map(x => '<td>' + (x[k] ?? '') + '</td>').join('') + '</tr>').join('')
     + '<tr><td>acumulado</td>' + s.scores.map(x => '<td><b>' + x + '</b></td>').join('') + '</tr></table>';
   const tds = $('mbody').querySelectorAll('tr:first-child td');
-  s.players.forEach((p, i) => tds[i + 1].textContent = p.name);
+  [0, 1].forEach(T => tds[T + 1].textContent = teamName(T));
   const b = Object.assign(document.createElement('button'), {textContent: 'Nueva mano'});
   b.onclick = () => { $('modal').className = ''; if (s.phase === 'over') play({type: 'next'}); };
   const c = Object.assign(document.createElement('button'), {textContent: 'Ver mesa'});
@@ -312,6 +345,12 @@ function askName() {
 }
 
 function start() {
+  if (!s && !ONLINE) {
+    const bots = MODE === 'solo' ? ['Bot'] : ['Rival 1', 'Compa', 'Rival 2'];
+    s = G.newState(rand(), {id: me, name: myName}, bots.length + 1);
+    bots.forEach((b, i) => s.players.push({id: 'bot' + i, name: b, bot: true}));
+    G.deal(s); save();
+  }
   if (!s) { s = G.newState(rand(), {id: me, name: myName}); save(); stAct.send(JSON.stringify(s)); }
   claim(); render(); renderChat();
   if (s.phase === 'over') showScore();
@@ -371,6 +410,17 @@ setInterval(async () => {
 $('upd').onclick = () => location.reload();
 setInterval(status, 3000);
 
-if (!myName) askName();
-else { start(); if (seat() < 0 && s.players.length >= 2) askSeat(); }
+function menu() {
+  const opts = [['Online con link', rand() + ':' + rand()], ['Práctica vs bot', 'solo'], ['2 vs 2 con bots', '2v2']];
+  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: 'Burako'}), ...opts.map(([l, h]) => {
+    const b = Object.assign(document.createElement('button'), {textContent: l});
+    b.onclick = () => location.hash = h;
+    return b;
+  }));
+  $('modal').className = 'on';
+}
+
+if (MODE === 'menu') menu();
+else if (!myName) askName();
+else { start(); if (ONLINE && seat() < 0 && s.players.length >= 2) askSeat(); }
 </script></body></html>

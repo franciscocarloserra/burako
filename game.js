@@ -61,23 +61,25 @@ function asSeq(ids) {
 }
 
 export const isCanasta = m => m.t.length >= R.canastaLen;
-const hasCanasta = (s, p) => s.melds[p].some(isCanasta);
+export const team = p => p % 2; // 2 players: seats 0,1; 2 vs 2: seats 0,2 vs 1,3
+const seats = s => s.n ?? 2;
+const hasCanasta = (s, p) => s.melds[team(p)].some(isCanasta);
 
-export function newState(id, player) {
-  return {schema: 1, id, v: 1, players: [player], phase: 'waiting', turn: 0, round: 0,
+export function newState(id, player, n = 2) {
+  return {schema: 1, id, v: 1, n, players: [player], phase: 'waiting', turn: 0, round: 0,
     mazo: [], pozo: [], muertos: [], hands: [[], []], melds: [[], []], muerto: [false, false],
     snap: null, scores: [0, 0], last: null, log: ''};
 }
 
 export function deal(s) {
   const deck = shuffle([...Array(108).keys()]);
-  s.hands = [deck.splice(0, R.handSize), deck.splice(0, R.handSize)];
+  s.hands = Array.from({length: seats(s)}, () => deck.splice(0, R.handSize));
   s.muertos = [deck.splice(0, R.handSize), deck.splice(0, R.handSize)];
   s.pozo = [deck.pop()];
   s.mazo = deck;
   s.melds = [[], []];
   s.muerto = [false, false];
-  s.turn = s.round % 2;
+  s.turn = s.round % seats(s);
   s.round++;
   s.phase = 'draw';
   s.snap = null;
@@ -86,7 +88,7 @@ export function deal(s) {
 }
 
 const name = (s, p) => s.players[p]?.name ?? '?';
-const takeSnap = (s, p) => { s.snap = JSON.stringify({h: s.hands[p], m: s.melds[p], k: s.muerto, d: s.muertos}); };
+const takeSnap = (s, p) => { s.snap = JSON.stringify({h: s.hands[p], m: s.melds[team(p)], k: s.muerto, d: s.muertos}); };
 
 function removeFromHand(s, p, ids) {
   const h = s.hands[p];
@@ -97,14 +99,16 @@ function removeFromHand(s, p, ids) {
 
 function takeMuerto(s, p) {
   s.hands[p] = s.muertos.pop();
-  s.muerto[p] = true;
+  s.muerto[team(p)] = true;
   s.log = name(s, p) + ' tomó el muerto';
 }
 
 // After melding: an empty hand takes the muerto or closes the round.
 function afterMeld(s, p) {
+  const stuck = s.muerto[team(p)] || !s.muertos.length;
+  if (s.hands[p].length === 1 && stuck && !hasCanasta(s, p)) return 'quedate con fichas: sin canasta no podés cerrar';
   if (s.hands[p].length) return;
-  if (!s.muerto[p] && s.muertos.length) return takeMuerto(s, p);
+  if (!s.muerto[team(p)] && s.muertos.length) return takeMuerto(s, p);
   if (!hasCanasta(s, p)) return 'necesitás una canasta para cerrar';
   endRound(s, p);
 }
@@ -148,18 +152,18 @@ function run(s, p, a) {
       const m = validate(a.ids);
       if (!m) return 'ese juego no vale';
       if (!removeFromHand(s, p, a.ids)) return 'fichas inválidas';
-      s.melds[p].push(m);
+      s.melds[team(p)].push(m);
       s.log = name(s, p) + ' bajó un juego';
       return afterMeld(s, p);
     }
     case 'add': {
       if (s.phase !== 'play') return 'primero robá';
-      const old = s.melds[p][a.meld];
+      const old = s.melds[team(p)][a.meld];
       if (!old) return 'juego inválido';
       const m = validate([...old.t, ...a.ids]);
       if (!m) return 'no entra en ese juego';
       if (!removeFromHand(s, p, a.ids)) return 'fichas inválidas';
-      s.melds[p][a.meld] = m;
+      s.melds[team(p)][a.meld] = m;
       s.log = name(s, p) + ' agregó a un juego';
       return afterMeld(s, p);
     }
@@ -169,11 +173,11 @@ function run(s, p, a) {
       s.pozo.push(a.id);
       s.log = name(s, p) + ' tiró';
       if (!s.hands[p].length) {
-        if (!s.muerto[p] && s.muertos.length) takeMuerto(s, p);
+        if (!s.muerto[team(p)] && s.muertos.length) takeMuerto(s, p);
         else if (hasCanasta(s, p)) return endRound(s, p);
         else return 'necesitás una canasta para cerrar';
       }
-      s.turn = 1 - p;
+      s.turn = (p + 1) % seats(s);
       s.phase = 'draw';
       s.snap = null;
       return;
@@ -181,7 +185,7 @@ function run(s, p, a) {
     case 'undo': {
       if (s.phase !== 'play' || !s.snap) return 'nada para deshacer';
       const o = JSON.parse(s.snap);
-      s.hands[p] = o.h; s.melds[p] = o.m; s.muerto = o.k; s.muertos = o.d;
+      s.hands[p] = o.h; s.melds[team(p)] = o.m; s.muerto = o.k; s.muertos = o.d;
       s.log = name(s, p) + ' deshizo';
       return;
     }
@@ -189,12 +193,13 @@ function run(s, p, a) {
   return 'acción desconocida';
 }
 
+// Scores are per team (index 0/1); closer is a seat.
 export function endRound(s, closer) {
   s.last = [0, 1].map(p => {
     const juegos = s.melds[p].reduce((a, m) => a + m.t.reduce((b, i) => b + value(i), 0), 0);
     const canastas = s.melds[p].filter(isCanasta).reduce((a, m) => a + (m.w ? R.canastaSucia : R.canastaLimpia), 0);
-    const cierre = closer === p ? R.closeBonus : 0;
-    const mano = -s.hands[p].reduce((a, i) => a + value(i), 0);
+    const cierre = closer != null && team(closer) === p ? R.closeBonus : 0;
+    const mano = -s.hands.filter((_, q) => team(q) === p).flat().reduce((a, i) => a + value(i), 0);
     const muerto = s.muerto[p] ? 0 : -R.muertoPenalty;
     const total = juegos + canastas + cierre + mano + muerto;
     s.scores[p] += total;
