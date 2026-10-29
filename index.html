@@ -26,7 +26,7 @@
   .meld{display:flex;gap:1px;padding:3px;border-radius:6px}
   .meld .tile{--tw:clamp(20px,6vw,30px)}
   .meld.can{background:#e0b03055;box-shadow:0 0 0 2px #e0b030}.meld.can.clean{background:#fff5;box-shadow:0 0 0 2px #fff}
-  .mine .meld{cursor:pointer}
+  .mine .meld{cursor:pointer}.meld.fit{background:#3c64;box-shadow:0 0 0 2px #5e5}
   #center{display:flex;justify-content:center;align-items:center;gap:22px;padding:6px 0}
   .stack{position:relative;text-align:center;font-size:11px;cursor:pointer}
   .stack .lbl{opacity:.7;margin-top:4px}
@@ -102,11 +102,11 @@
 <div id="modal"><div id="mbody"></div></div>
 <script type="module">
 window.onerror = window.onunhandledrejection = e => toast('error: ' + (e.reason || e.message || e));
-import {joinRoom} from './trystero-nostr.mjs?v=2026-10-29.8';
-import * as G from './game.js?v=2026-10-29.8';
-import {botStep} from './bot.js?v=2026-10-29.8';
+import {joinRoom} from './trystero-nostr.mjs?v=2026-10-29.9';
+import * as G from './game.js?v=2026-10-29.9';
+import {botStep} from './bot.js?v=2026-10-29.9';
 
-const VERSION = '2026-10-29.8';
+const VERSION = '2026-10-29.9';
 
 // Tunable parameters
 const P = {
@@ -223,7 +223,8 @@ function meldEl(m, i, mine) {
   const d = document.createElement('div');
   d.className = 'meld' + (G.isCanasta(m) ? ' can' + (m.w ? '' : ' clean') : '');
   d.append(...m.t.map(id => tile(id)));
-  if (mine) d.onclick = () => sel.size ? play({type: 'add', meld: i, ids: [...sel]}) : toast('elegí fichas para agregar');
+  if (mine && sel.size && G.validate([...m.t, ...sel])) d.className += ' fit';
+  if (mine) d.onclick = () => sel.size ? withWildSide([...m.t, ...sel], low => play({type: 'add', meld: i, ids: [...sel], low}), m.low) : toast('elegí fichas para agregar');
   return d;
 }
 
@@ -327,6 +328,22 @@ function showScore() {
   $('modal').className = 'on';
 }
 
+// A wild that fits on either end of a run: let the player pick the end
+function withWildSide(ids, go, cur) {
+  const hi = G.validate(ids, false), lo = G.validate(ids, true);
+  if (!hi || !lo || hi.t.join() === lo.t.join() || ids.length === 0) return go(cur);
+  const opt = (m, low) => {
+    const b = document.createElement('button');
+    b.style.cssText = 'display:flex;gap:2px;justify-content:center;background:#0004';
+    b.append(...m.t.map(id => tile(id)));
+    b.onclick = () => { $('modal').className = ''; go(low); };
+    return b;
+  };
+  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: '¿Dónde va el comodín?'}), opt(lo, true), opt(hi, false));
+  $('mbody').querySelectorAll('.tile').forEach(x => x.style.setProperty('--tw', '26px'));
+  $('modal').className = 'on';
+}
+
 // Seat taken by someone else: let a device that lost its storage take over a seat
 function askSeat() {
   $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: '¿Quién sos?'}),
@@ -402,7 +419,7 @@ document.querySelector('main').onclick = () => { if (chatOpen) $('chatBtn').oncl
 // --- table actions
 $('mazo').onclick = () => isMyTurn() && s.phase === 'draw' ? play({type: 'draw'}) : toast(isMyTurn() ? 'ya robaste' : 'no es tu turno');
 $('pozoBox').onclick = () => isMyTurn() && s.phase === 'draw' ? play({type: 'pozo'}) : toast(isMyTurn() ? 'ya robaste' : 'no es tu turno');
-$('bMeld').onclick = () => play({type: 'meld', ids: [...sel]});
+$('bMeld').onclick = () => withWildSide([...sel], low => play({type: 'meld', ids: [...sel], low}));
 $('bDisc').onclick = () => play({type: 'discard', id: [...sel][0]});
 $('bUndo').onclick = () => play({type: 'undo'});
 $('bSort').onclick = () => { sortBy = sortBy === 'color' ? 'num' : 'color'; localStorage.setItem('burako:sort', sortBy); render(); };

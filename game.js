@@ -24,10 +24,11 @@ function shuffle(a) {
   return a;
 }
 
-// Returns {t: ordered ids, w: uses a wild as wild} or null.
-export function validate(ids) {
+// Returns {t: ordered ids, w: uses a wild as wild, low: wild sits at the bottom end} or null.
+// low picks the end for a wild that could go on either end of a run.
+export function validate(ids, low = false) {
   if (ids.length < 3) return null;
-  return asSet(ids) ?? asSeq(ids);
+  return asSet(ids) ?? asSeq(ids, low);
 }
 
 function asSet(ids) {
@@ -37,7 +38,7 @@ function asSet(ids) {
   return {t: [...nat.sort((a, b) => color(a) - color(b)), ...wild], w: wild.length > 0};
 }
 
-function asSeq(ids) {
+function asSeq(ids, low) {
   const twos = ids.filter(i => i < 104 && num(i) === 2);
   for (let mask = (1 << twos.length) - 1; mask >= 0; mask--) {
     const natTwos = twos.filter((_, k) => mask >> k & 1);
@@ -50,11 +51,15 @@ function asSeq(ids) {
       if (new Set(vs).size !== vs.length) continue;
       const lo = Math.min(...vs), hi = Math.max(...vs), n = ids.length;
       if (hi - lo + 1 - nat.length > wild.length) continue;
-      const start = Math.max(1, Math.min(lo, 14 - n + 1));
-      if (start > lo || start + n - 1 < hi || (aceHigh && start === 1)) continue;
-      const out = [], w = [...wild];
-      for (let v = start; v < start + n; v++) out.push(nat.find(i => val(i) === v) ?? w.pop());
-      return {t: out, w: wild.length > 0};
+      const top = Math.max(1, Math.min(lo, 14 - n + 1)), bottom = Math.max(1, hi - n + 1);
+      for (const start of low ? [bottom, top] : [top, bottom]) {
+        if (start > lo || start + n - 1 < hi || start + n - 1 > 14 || (aceHigh && start === 1)) continue;
+        const out = [], w = [...wild];
+        for (let v = start; v < start + n; v++) out.push(nat.find(i => val(i) === v) ?? w.pop());
+        const m = {t: out, w: wild.length > 0};
+        if (start < lo) m.low = true;
+        return m;
+      }
     }
   }
   return null;
@@ -156,7 +161,7 @@ function run(s, p, a) {
     }
     case 'meld': {
       if (s.phase !== 'play') return 'primero robá';
-      const m = validate(a.ids);
+      const m = validate(a.ids, a.low);
       if (!m) return 'ese juego no vale';
       if (!removeFromHand(s, p, a.ids)) return 'fichas inválidas';
       s.melds[team(p)].push(m);
@@ -167,7 +172,7 @@ function run(s, p, a) {
       if (s.phase !== 'play') return 'primero robá';
       const old = s.melds[team(p)][a.meld];
       if (!old) return 'juego inválido';
-      const m = validate([...old.t, ...a.ids]);
+      const m = validate([...old.t, ...a.ids], a.low ?? old.low);
       if (!m) return 'no entra en ese juego';
       if (!removeFromHand(s, p, a.ids)) return 'fichas inválidas';
       s.melds[team(p)][a.meld] = m;
