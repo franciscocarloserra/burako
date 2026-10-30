@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8">
+<html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>burako</title>
 <link rel="icon" href="data:,">
@@ -103,40 +103,40 @@
   .xl #lobby{background:#fff2cc;color:#222;border:1px solid #bf9000;border-radius:0}
   .xl #toast{background:#fff;color:#222;border:1px solid #adadad;border-radius:0}
 </style></head><body>
-<div id="xlhead"><div>Libro1 - Excel</div><div class="tabs"><span>Archivo</span><span>Inicio</span><span>Insertar</span><span>Fórmulas</span><span>Datos</span><span>Revisar</span></div><div class="fx">fx&nbsp;&nbsp;=SUMA(B2:B14)</div><div class="cols"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span></div></div>
-<div id="bar"><span id="dot"></span><span id="status">conectando...</span><button class="pill" id="upd">actualizar</button><button class="pill" id="copy">link</button><button class="pill" id="home">inicio</button><button class="pill" id="xl">xl</button></div>
-<div id="lobby"><span id="lobbyT"></span><br><button id="lCopy">Copiar link</button><button id="lNew">Partida nueva</button></div>
+<div id="xlhead"><div>Book1 - Excel</div><div class="tabs"><span>File</span><span>Home</span><span>Insert</span><span>Formulas</span><span>Data</span><span>Review</span></div><div class="fx">fx&nbsp;&nbsp;=SUM(B2:B14)</div><div class="cols"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span></div></div>
+<div id="bar"><span id="dot"></span><span id="status">connecting...</span><button class="pill" id="upd">update</button><button class="pill" id="copy">link</button><button class="pill" id="home">home</button><button class="pill" id="xl">xl</button></div>
+<div id="lobby"><span id="lobbyT"></span><br><button id="lCopy">Copy link</button><button id="lNew">New game</button></div>
 <main>
   <div class="others" id="oppHand"></div>
-  <div class="who"><span id="oppName">esperando rival...</span><span id="oppScore"></span></div>
+  <div class="who"><span id="oppName">waiting for opponent...</span><span id="oppScore"></span></div>
   <div class="melds" id="oppMelds"></div>
   <div id="center">
     <div class="stack" id="mazo"><div class="bigback"></div><div class="lbl" id="mazoN"></div></div>
-    <div class="stack" id="pozoBox"><div id="pozo"></div><div class="lbl" id="pozoN">pozo</div></div>
-    <div class="stack"><div class="muertos" id="muertos"></div><div class="lbl">muertos</div></div>
+    <div class="stack" id="pozoBox"><div id="pozo"></div><div class="lbl" id="pozoN">pile</div></div>
+    <div class="stack"><div class="muertos" id="muertos"></div><div class="lbl">dead hands</div></div>
   </div>
   <div class="melds mine" id="myMelds"></div>
   <div class="who"><span id="myName"></span><span id="myScore"></span></div>
   <div id="hand"></div>
 </main>
 <div id="acts">
-  <button id="bUndo" title="Deshacer">↶</button><button id="bMeld">Bajar</button><button id="bDisc">Descartar</button><button id="bSort">Ordenar</button>
+  <button id="bUndo" title="Undo">↶</button><button id="bMeld">Meld</button><button id="bDisc">Discard</button><button id="bSort">Sort</button>
   <button id="chatBtn">💬<span id="unread"></span></button>
 </div>
 <div id="chat">
   <div id="msgs"></div>
   <div id="teases"></div>
-  <form id="cf"><input id="ct" autocomplete="off" maxlength="200" enterkeyhint="send" placeholder="molestar..."><button>➤</button></form>
+  <form id="cf"><input id="ct" autocomplete="off" maxlength="200" enterkeyhint="send" placeholder="tease..."><button>➤</button></form>
 </div>
 <div id="toast"></div>
 <div id="modal"><div id="mbody"></div></div>
 <script type="module">
 window.onerror = window.onunhandledrejection = e => toast('error: ' + (e.reason || e.message || e));
-import {joinRoom} from './trystero-nostr.mjs?v=2026-10-29.15';
-import * as G from './game.js?v=2026-10-29.15';
-import {botStep} from './bot.js?v=2026-10-29.15';
+import {joinRoom} from './trystero-nostr.mjs?v=2026-10-30.1';
+import * as G from './game.js?v=2026-10-30.1';
+import {botStep} from './bot.js?v=2026-10-30.1';
 
-const VERSION = '2026-10-29.15';
+const VERSION = '2026-10-30.1';
 
 // Tunable parameters
 const P = {
@@ -157,8 +157,45 @@ const P = {
   dragPx: 8,            // pointer travel before a hand tile starts dragging
   aloneAskMs: 60000,    // alone in an old game this long: offer a new one
 };
-const TEASES = ['🐢 dale que es para hoy', '😜 te voy a ganar', '👉 pinchar', '💋', '😴', '🤡 jugada de payaso', '🔥 tremenda', '😂'];
+// UI text is English; ES maps each English string to Spanish for Spanish browsers
+const ES = {
+  'connecting...': 'conectando...', 'update': 'actualizar', 'home': 'inicio', 'Copy link': 'Copiar link', 'New game': 'Partida nueva',
+  'waiting for opponent...': 'esperando rival...', 'pile': 'pozo', 'dead hands': 'muertos', 'Undo': 'Deshacer', 'Meld': 'Bajar',
+  'Discard': 'Descartar', 'Sort': 'Ordenar', 'tease...': 'molestar...', 'Book1 - Excel': 'Libro1 - Excel',
+  'File': 'Archivo', 'Home': 'Inicio', 'Insert': 'Insertar', 'Formulas': 'Fórmulas', 'Data': 'Datos', 'Review': 'Revisar', 'fx\u00a0\u00a0=SUM(B2:B14)': 'fx\u00a0\u00a0=SUMA(B2:B14)',
+  'pick tiles to add': 'elegí fichas para agregar', 'taking a seat...': 'sentándose...', 'send the link to your opponent': 'pasale el link a tu rival',
+  'hand over': 'mano terminada', 'your turn: draw from the deck or the pile': 'tu turno: robá del mazo o del pozo',
+  'lay down melds and discard one': 'bajá juegos y descartá una', '{0}\'s turn': 'turno de {0}', ' (offline)': ' (desconectado)',
+  'Nobody here yet. Send the link to your opponent or start another game.': 'Nadie conectado todavía. Pasale el link a tu rival o empezá otra partida.',
+  'Your opponent is offline. The game is saved; you can wait or start another.': 'Tu rival no está conectado. La partida sigue guardada; podés esperarlo o empezar otra.',
+  ' · with dead hand': ' · con muerto', '{0} pts': '{0} pts', ' (partner)': ' (compa)', 'deck {0}': 'mazo {0}', 'pile {0}': 'pozo {0}',
+  'By color': 'Por color', 'By number': 'Por número', 'Hand {0}': 'Mano {0}',
+  'melds': 'juegos', 'canastas': 'canastas', 'going out': 'cierre', 'in hand': 'mano', 'dead hand': 'muerto', 'total': 'total', 'running total': 'acumulado',
+  'New hand': 'Nueva mano', 'View table': 'Ver mesa', 'Where does the wild go?': '¿Dónde va el comodín?', 'Who are you?': '¿Quién sos?', 'I\'m {0}': 'Soy {0}',
+  'Your opponent isn\'t showing up': 'Tu rival no aparece', 'Keep waiting': 'Seguir esperando', 'your name': 'tu nombre', 'Play': 'Jugar',
+  'Partner': 'Compa', 'Opponent 1': 'Rival 1', 'Opponent 2': 'Rival 2', 'link copied': 'link copiado',
+  'Online with link': 'Online con link', 'Practice vs bot': 'Práctica vs bot', '2 vs 2 with bots': '2 vs 2 con bots',
+  '🐢 hurry up already': '🐢 dale que es para hoy', '😜 I\'m gonna beat you': '😜 te voy a ganar', '👉 poke': '👉 pinchar', '🤡 clown move': '🤡 jugada de payaso', '🔥 sick move': '🔥 tremenda',
+  // game.js errors and log
+  'keep a tile: you can\'t go out without a canasta': 'quedate con fichas: sin canasta no podés cerrar', 'you need a canasta to go out': 'necesitás una canasta para cerrar',
+  'the hand isn\'t over': 'la mano no terminó', 'not your turn': 'no es tu turno', 'you already drew': 'ya robaste', 'the pile is empty': 'el pozo está vacío',
+  'draw first': 'primero robá', 'not a valid meld': 'ese juego no vale', 'invalid tiles': 'fichas inválidas', 'invalid meld': 'juego inválido',
+  'doesn\'t fit that meld': 'no entra en ese juego', 'invalid tile': 'ficha inválida', 'nothing to undo': 'nada para deshacer', 'unknown action': 'acción desconocida',
+  'hand {0}': 'mano {0}', '{0} took the dead hand': '{0} tomó el muerto', '{0} drew from the deck': '{0} robó del mazo', '{0} took the pile ({1})': '{0} levantó el pozo ({1})',
+  '{0} laid down a meld': '{0} bajó un juego', '{0} added to a meld': '{0} agregó a un juego', '{0} discarded': '{0} tiró', '{0} undid': '{0} deshizo',
+  'the deck ran out': 'se acabó el mazo', '{0} went out': '{0} cerró',
+};
+const LANG = navigator.language.startsWith('es') ? 'es' : 'en';
+const fill = (k, a) => a.reduce((x, v, i) => x.replace('{' + i + '}', v), k);
+const t = (k, ...a) => fill((LANG === 'es' && ES[k]) || k, a);
+// ev is stale when an older client wrote only log
+const log = () => s.ev && fill(s.ev[0], s.ev.slice(1)) === s.log ? t(...s.ev) : s.log;
+const TEASES = ['🐢 hurry up already', '😜 I\'m gonna beat you', '👉 poke', '💋', '😴', '🤡 clown move', '🔥 sick move', '😂'].map(x => t(x)), POKE = 2;
 const $ = id => document.getElementById(id);
+// Static HTML text
+document.documentElement.lang = LANG;
+document.querySelectorAll('#xlhead *, #bar *, #lobby button, #oppName, .lbl, #acts button').forEach(e => { if (!e.children.length && e.textContent) e.textContent = t(e.textContent); });
+$('bUndo').title = t('Undo'); $('ct').placeholder = t('tease...');
 let aloneTimer = 0, aloneAsked = false;
 
 // Online: room and password live in the URL hash #room:password (password encrypts signaling; WebRTC itself is end-to-end).
@@ -239,7 +276,7 @@ const isMyTurn = () => s && seat() >= 0 && s.turn === seat() && (s.phase === 'dr
 
 function play(a) {
   const err = G.act(s, seat(), a);
-  if (err) { toast(err); return false; }
+  if (err) { toast(t(err)); return false; }
   sel.clear(); commit();
   if (s.phase === 'over') showScore();
   return true;
@@ -264,51 +301,51 @@ function meldEl(m, i, mine) {
   d.className = 'meld' + (G.isCanasta(m) ? ' can' + (m.w ? '' : ' clean') : '');
   d.append(...m.t.map(id => tile(id)));
   if (mine && sel.size && G.validate([...m.t, ...sel])) d.className += ' fit';
-  if (mine) d.onclick = () => sel.size ? withWildSide([...m.t, ...sel], low => play({type: 'add', meld: i, ids: [...sel], low}), m.low) : toast('elegí fichas para agregar');
+  if (mine) d.onclick = () => sel.size ? withWildSide([...m.t, ...sel], low => play({type: 'add', meld: i, ids: [...sel], low}), m.low) : toast(t('pick tiles to add'));
   return d;
 }
 
 function status() {
   const peers = Object.keys(r.getPeers()).length;
   $('dot').className = peers ? 'on' : '';
-  let t;
+  let msg;
   if (!ONLINE) $('dot').className = 'on';
-  if (!s || s.phase === 'waiting') t = peers ? 'sentándose...' : 'pasale el link a tu rival';
-  else if (s.phase === 'over') t = 'mano terminada · ' + s.log;
-  else if (isMyTurn()) t = s.phase === 'draw' ? 'tu turno: robá del mazo o del pozo' : 'bajá juegos y descartá una';
-  else t = 'turno de ' + (s.players[s.turn]?.name ?? '?') + (peers || !ONLINE ? '' : ' (desconectado)');
+  if (!s || s.phase === 'waiting') msg = peers ? t('taking a seat...') : t('send the link to your opponent');
+  else if (s.phase === 'over') msg = t('hand over') + ' · ' + log();
+  else if (isMyTurn()) msg = t(s.phase === 'draw' ? 'your turn: draw from the deck or the pile' : 'lay down melds and discard one');
+  else msg = t('{0}\'s turn', s.players[s.turn]?.name ?? '?') + (peers || !ONLINE ? '' : t(' (offline)'));
   // Online with nobody else here: say so plainly and offer a fresh game
   const alone = ONLINE && !peers, playing = s && s.phase !== 'waiting';
   $('lobby').className = alone ? 'on' : '';
   if (!alone || !playing) clearTimeout(aloneTimer), aloneTimer = 0;
   else if (!aloneTimer && !aloneAsked) aloneTimer = setTimeout(askAlone, P.aloneAskMs);
-  $('lobbyT').textContent = !playing ? 'Nadie conectado todavía. Pasale el link a tu rival o empezá otra partida.'
-    : 'Tu rival no está conectado. La partida sigue guardada; podés esperarlo o empezar otra.';
-  $('status').textContent = t + (s?.log && s.phase !== 'over' ? ' · ' + s.log : '');
+  $('lobbyT').textContent = t(!playing ? 'Nobody here yet. Send the link to your opponent or start another game.'
+    : 'Your opponent is offline. The game is saved; you can wait or start another.');
+  $('status').textContent = msg + (s?.log && s.phase !== 'over' ? ' · ' + log() : '');
 }
 
 function render() {
   status();
   const p = seat();
   if (!s || p < 0) return;
-  const t = G.team(p), o = 1 - t, n = s.n ?? 2, back = () => Object.assign(document.createElement('div'), {className: 'back'});
+  const mt = G.team(p), o = 1 - mt, n = s.n ?? 2, back = () => Object.assign(document.createElement('div'), {className: 'back'});
   document.body.classList.toggle('n4', n === 4);
-  $('oppName').textContent = s.players.length > 1 ? teamName(o) + (s.muerto[o] ? ' · con muerto' : '') : 'esperando rival...';
-  $('myName').textContent = teamName(t) + (s.muerto[t] ? ' · con muerto' : '');
-  $('oppScore').textContent = s.players.length > 1 ? s.scores[o] + ' pts' : '';
-  $('myScore').textContent = s.scores[t] + ' pts';
+  $('oppName').textContent = s.players.length > 1 ? teamName(o) + (s.muerto[o] ? t(' · with dead hand') : '') : t('waiting for opponent...');
+  $('myName').textContent = teamName(mt) + (s.muerto[mt] ? t(' · with dead hand') : '');
+  $('oppScore').textContent = s.players.length > 1 ? t('{0} pts', s.scores[o]) : '';
+  $('myScore').textContent = t('{0} pts', s.scores[mt]);
   $('oppHand').replaceChildren(...[...Array(n).keys()].filter(q => q !== p && s.players[q]).map(q => {
     const w = Object.assign(document.createElement('div'), {className: 'rack' + (s.turn === q ? ' turn' : '')});
     const b = Object.assign(document.createElement('div'), {className: 'backs'});
     b.append(...s.hands[q].map(back));
-    w.append(s.players[q].name + (G.team(q) === t ? ' (compa)' : ''), b);
+    w.append(s.players[q].name + (G.team(q) === mt ? t(' (partner)') : ''), b);
     return w;
   }));
   $('oppMelds').replaceChildren(...s.melds[o].map((m, i) => meldEl(m, i, false)));
-  $('myMelds').replaceChildren(...s.melds[t].map((m, i) => meldEl(m, i, true)));
-  $('mazoN').textContent = 'mazo ' + s.mazo.length;
+  $('myMelds').replaceChildren(...s.melds[mt].map((m, i) => meldEl(m, i, true)));
+  $('mazoN').textContent = t('deck {0}', s.mazo.length);
   $('pozo').replaceChildren(...s.pozo.slice(-5).map(id => tile(id)));
-  $('pozoN').textContent = 'pozo ' + s.pozo.length;
+  $('pozoN').textContent = t('pile {0}', s.pozo.length);
   $('muertos').replaceChildren(...s.muertos.map(() => Object.assign(document.createElement('div'), {className: 'back'})));
   for (const id of sel) if (!s.hands[p].includes(id)) sel.delete(id);
   $('hand').replaceChildren(...order(s.hands[p]).map(id => {
@@ -323,7 +360,7 @@ function render() {
   $('bMeld').disabled = !play_ || sel.size < 3;
   $('bDisc').disabled = !play_ || sel.size !== 1;
   $('bUndo').disabled = !play_;
-  $('bSort').textContent = sortBy === 'color' ? 'Por color' : sortBy === 'num' ? 'Por número' : 'Ordenar';
+  $('bSort').textContent = t(sortBy === 'color' ? 'By color' : sortBy === 'num' ? 'By number' : 'Sort');
   botLoop();
 }
 const teamName = T => s.players.filter((_, q) => G.team(q) === T).map(x => x.name).join(' + ');
@@ -396,16 +433,16 @@ function cascade(done) {
 
 function showScore() { cascade(scoreModal); }
 function scoreModal() {
-  const rows = ['juegos', 'canastas', 'cierre', 'mano', 'muerto', 'total'];
+  const rows = {juegos: 'melds', canastas: 'canastas', cierre: 'going out', mano: 'in hand', muerto: 'dead hand', total: 'total'};
   const L = s.last || [{}, {}];
-  $('mbody').innerHTML = '<b>Mano ' + s.round + '</b><table><tr><td></td><td></td><td></td></tr>'
-    + rows.map(k => '<tr><td>' + k + '</td>' + L.map(x => '<td>' + (x[k] ?? '') + '</td>').join('') + '</tr>').join('')
-    + '<tr><td>acumulado</td>' + s.scores.map(x => '<td><b>' + x + '</b></td>').join('') + '</tr></table>';
+  $('mbody').innerHTML = '<b>' + t('Hand {0}', s.round) + '</b><table><tr><td></td><td></td><td></td></tr>'
+    + Object.entries(rows).map(([k, l]) => '<tr><td>' + t(l) + '</td>' + L.map(x => '<td>' + (x[k] ?? '') + '</td>').join('') + '</tr>').join('')
+    + '<tr><td>' + t('running total') + '</td>' + s.scores.map(x => '<td><b>' + x + '</b></td>').join('') + '</tr></table>';
   const tds = $('mbody').querySelectorAll('tr:first-child td');
   [0, 1].forEach(T => tds[T + 1].textContent = teamName(T));
-  const b = Object.assign(document.createElement('button'), {textContent: 'Nueva mano'});
+  const b = Object.assign(document.createElement('button'), {textContent: t('New hand')});
   b.onclick = () => { $('modal').className = ''; if (s.phase === 'over') play({type: 'next'}); };
-  const c = Object.assign(document.createElement('button'), {textContent: 'Ver mesa'});
+  const c = Object.assign(document.createElement('button'), {textContent: t('View table')});
   c.style.background = '#444';
   c.onclick = () => $('modal').className = '';
   $('mbody').append(b, c);
@@ -423,16 +460,16 @@ function withWildSide(ids, go, cur) {
     b.onclick = () => { $('modal').className = ''; go(low); };
     return b;
   };
-  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: '¿Dónde va el comodín?'}), opt(lo, true), opt(hi, false));
+  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: t('Where does the wild go?')}), opt(lo, true), opt(hi, false));
   $('mbody').querySelectorAll('.tile').forEach(x => x.style.setProperty('--tw', '26px'));
   $('modal').className = 'on';
 }
 
 // Seat taken by someone else: let a device that lost its storage take over a seat
 function askSeat() {
-  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: '¿Quién sos?'}),
+  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: t('Who are you?')}),
     ...s.players.map(p => {
-      const b = Object.assign(document.createElement('button'), {textContent: 'Soy ' + p.name});
+      const b = Object.assign(document.createElement('button'), {textContent: t('I\'m {0}', p.name)});
       b.onclick = () => { me = p.id; myName = p.name; localStorage.setItem(KEY + ':me', me); localStorage.setItem('burako:name', myName); $('modal').className = ''; render(); };
       return b;
     }));
@@ -468,17 +505,17 @@ function dragTile(e, id, d) {
 function askAlone() {
   if ($('modal').className) return aloneTimer = setTimeout(askAlone, P.aloneAskMs);
   aloneAsked = true;
-  const n = Object.assign(document.createElement('button'), {textContent: 'Partida nueva'});
-  const w = Object.assign(document.createElement('button'), {textContent: 'Seguir esperando'});
+  const n = Object.assign(document.createElement('button'), {textContent: t('New game')});
+  const w = Object.assign(document.createElement('button'), {textContent: t('Keep waiting')});
   n.onclick = () => location.hash = rand() + ':' + rand();
   w.onclick = () => $('modal').className = '';
-  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: 'Tu rival no aparece'}), n, w);
+  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: t('Your opponent isn\'t showing up')}), n, w);
   $('modal').className = 'on';
 }
 
 function askName() {
-  const i = Object.assign(document.createElement('input'), {placeholder: 'tu nombre', maxLength: 20});
-  const b = Object.assign(document.createElement('button'), {textContent: 'Jugar'});
+  const i = Object.assign(document.createElement('input'), {placeholder: t('your name'), maxLength: 20});
+  const b = Object.assign(document.createElement('button'), {textContent: t('Play')});
   b.onclick = () => {
     const n = i.value.trim();
     if (!n) return;
@@ -492,7 +529,7 @@ function askName() {
 
 function start() {
   if (!s && !ONLINE) {
-    const bots = MODE === 'solo' ? ['Bot'] : ['Rival 1', 'Compa', 'Rival 2'];
+    const bots = MODE === 'solo' ? ['Bot'] : ['Opponent 1', 'Partner', 'Opponent 2'].map(x => t(x));
     s = G.newState(rand(), {id: me, name: myName}, bots.length + 1);
     bots.forEach((b, i) => s.players.push({id: 'bot' + i, name: b, bot: true}));
     G.deal(s); save();
@@ -525,12 +562,12 @@ function sendChat(text) {
   const m = {id: rand(), from: myName, by: me, text, ts: Date.now()};
   addChat(m); chatAct.send(JSON.stringify(m));
 }
-$('teases').append(...TEASES.map(t => {
-  const b = Object.assign(document.createElement('button'), {textContent: t});
+$('teases').append(...TEASES.map((x, i) => {
+  const b = Object.assign(document.createElement('button'), {textContent: x});
   b.onclick = () => {
-    const e = [...t][0], shake = t.includes('pinchar');
+    const e = [...x][0], shake = i === POKE;
     tease(e, false); pokeAct.send(JSON.stringify({e, shake}));
-    if (!shake && t.length > 2) sendChat(t);
+    if (!shake && x.length > 2) sendChat(x);
   };
   return b;
 }));
@@ -539,13 +576,13 @@ $('chatBtn').onclick = () => { chatOpen = !chatOpen; $('chat').classList.toggle(
 document.querySelector('main').onclick = () => { if (chatOpen) $('chatBtn').onclick(); };
 
 // --- table actions
-$('mazo').onclick = () => isMyTurn() && s.phase === 'draw' ? play({type: 'draw'}) : toast(isMyTurn() ? 'ya robaste' : 'no es tu turno');
-$('pozoBox').onclick = () => isMyTurn() && s.phase === 'draw' ? play({type: 'pozo'}) : toast(isMyTurn() ? 'ya robaste' : 'no es tu turno');
+$('mazo').onclick = () => isMyTurn() && s.phase === 'draw' ? play({type: 'draw'}) : toast(t(isMyTurn() ? 'you already drew' : 'not your turn'));
+$('pozoBox').onclick = () => isMyTurn() && s.phase === 'draw' ? play({type: 'pozo'}) : toast(t(isMyTurn() ? 'you already drew' : 'not your turn'));
 $('bMeld').onclick = () => withWildSide([...sel], low => play({type: 'meld', ids: [...sel], low}));
 $('bDisc').onclick = () => play({type: 'discard', id: [...sel][0]});
 $('bUndo').onclick = () => play({type: 'undo'});
 $('bSort').onclick = () => { sortBy = sortBy === 'color' ? 'num' : 'color'; localStorage.setItem('burako:sort', sortBy); render(); };
-$('copy').onclick = async () => { await navigator.clipboard.writeText(location.href); toast('link copiado'); };
+$('copy').onclick = async () => { await navigator.clipboard.writeText(location.href); toast(t('link copied')); };
 
 // New deploys: state lives in localStorage and the peer, so reloading is safe
 setInterval(async () => {
@@ -558,7 +595,7 @@ $('upd').onclick = () => location.reload();
 $('home').onclick = () => location.hash = '';
 const stealth = on => {
   document.body.classList.toggle('xl', on);
-  document.title = on ? 'Libro1 - Excel' : 'burako';
+  document.title = on ? t('Book1 - Excel') : 'burako';
   localStorage.setItem('burako:xl', on ? '1' : '');
 };
 stealth(!!localStorage.getItem('burako:xl'));
@@ -569,9 +606,9 @@ $('lNew').onclick = () => location.hash = rand() + ':' + rand();
 setInterval(status, 3000);
 
 function menu() {
-  const opts = [['Online con link', rand() + ':' + rand()], ['Práctica vs bot', 'solo'], ['2 vs 2 con bots', '2v2']];
+  const opts = [['Online with link', rand() + ':' + rand()], ['Practice vs bot', 'solo'], ['2 vs 2 with bots', '2v2']];
   $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: 'Burako'}), ...opts.map(([l, h]) => {
-    const b = Object.assign(document.createElement('button'), {textContent: l});
+    const b = Object.assign(document.createElement('button'), {textContent: t(l)});
     b.onclick = () => location.hash = h;
     return b;
   }));

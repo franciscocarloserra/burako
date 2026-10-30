@@ -1,4 +1,4 @@
-// Burako rules for two players with tiles (fichas). Pure state mutations, no DOM.
+// Burako rules for two or four players with tiles. Pure state mutations, no DOM.
 // Tiles are ids: 0..103 = 2 sets x 4 colors x 1..13, 104..107 = comodines.
 
 export const R = {
@@ -80,6 +80,7 @@ export function newState(id, player, n = 2) {
 export function migrate(s) {
   if (!s || typeof s !== 'object') return s;
   s.n ??= 2;
+  s.ev ??= null;
   return s;
 }
 
@@ -96,10 +97,12 @@ export function deal(s) {
   s.phase = 'draw';
   s.snap = null;
   s.last = null;
-  s.log = 'mano ' + s.round;
+  say(s, 'hand {0}', s.round);
 }
 
 const name = (s, p) => s.players[p]?.name ?? '?';
+// log: English text for older clients; ev: [template, ...args] so each client shows it in its own language
+const say = (s, k, ...a) => { s.ev = [k, ...a]; s.log = a.reduce((t, x, i) => t.replace('{' + i + '}', x), k); };
 const takeSnap = (s, p) => { s.snap = JSON.stringify({h: s.hands[p], m: s.melds[team(p)], k: s.muerto, d: s.muertos}); };
 
 function removeFromHand(s, p, ids) {
@@ -112,25 +115,25 @@ function removeFromHand(s, p, ids) {
 function takeMuerto(s, p) {
   s.hands[p] = s.muertos.pop();
   s.muerto[team(p)] = true;
-  s.log = name(s, p) + ' tomó el muerto';
+  say(s, '{0} took the dead hand', name(s, p));
 }
 
 // After melding: an empty hand takes the muerto or closes the round.
 function afterMeld(s, p) {
   const stuck = s.muerto[team(p)] || !s.muertos.length;
-  if (s.hands[p].length === 1 && stuck && !hasCanasta(s, p)) return 'quedate con fichas: sin canasta no podés cerrar';
+  if (s.hands[p].length === 1 && stuck && !hasCanasta(s, p)) return 'keep a tile: you can\'t go out without a canasta';
   if (s.hands[p].length) return;
   if (!s.muerto[team(p)] && s.muertos.length) return takeMuerto(s, p);
-  if (!hasCanasta(s, p)) return 'necesitás una canasta para cerrar';
+  if (!hasCanasta(s, p)) return 'you need a canasta to go out';
   endRound(s, p);
 }
 
 export function act(s, p, a) {
   if (a.type === 'next') {
-    if (s.phase !== 'over') return 'la mano no terminó';
+    if (s.phase !== 'over') return 'the hand isn\'t over';
     deal(s); return;
   }
-  if (s.turn !== p || (s.phase !== 'draw' && s.phase !== 'play')) return 'no es tu turno';
+  if (s.turn !== p || (s.phase !== 'draw' && s.phase !== 'play')) return 'not your turn';
   const before = JSON.stringify(s);
   const err = run(s, p, a);
   if (err) Object.assign(s, JSON.parse(before));
@@ -140,54 +143,54 @@ export function act(s, p, a) {
 function run(s, p, a) {
   switch (a.type) {
     case 'draw': {
-      if (s.phase !== 'draw') return 'ya robaste';
+      if (s.phase !== 'draw') return 'you already drew';
       if (!s.mazo.length) {
         if (s.muertos.length) s.mazo = s.muertos.pop();
         else return endRound(s, null);
       }
       s.hands[p].push(s.mazo.pop());
       s.phase = 'play';
-      s.log = name(s, p) + ' robó del mazo';
+      say(s, '{0} drew from the deck', name(s, p));
       return takeSnap(s, p);
     }
     case 'pozo': {
-      if (s.phase !== 'draw') return 'ya robaste';
-      if (!s.pozo.length) return 'el pozo está vacío';
-      s.log = name(s, p) + ' levantó el pozo (' + s.pozo.length + ')';
+      if (s.phase !== 'draw') return 'you already drew';
+      if (!s.pozo.length) return 'the pile is empty';
+      say(s, '{0} took the pile ({1})', name(s, p), s.pozo.length);
       s.hands[p].push(...s.pozo);
       s.pozo = [];
       s.phase = 'play';
       return takeSnap(s, p);
     }
     case 'meld': {
-      if (s.phase !== 'play') return 'primero robá';
+      if (s.phase !== 'play') return 'draw first';
       const m = validate(a.ids, a.low);
-      if (!m) return 'ese juego no vale';
-      if (!removeFromHand(s, p, a.ids)) return 'fichas inválidas';
+      if (!m) return 'not a valid meld';
+      if (!removeFromHand(s, p, a.ids)) return 'invalid tiles';
       s.melds[team(p)].push(m);
-      s.log = name(s, p) + ' bajó un juego';
+      say(s, '{0} laid down a meld', name(s, p));
       return afterMeld(s, p);
     }
     case 'add': {
-      if (s.phase !== 'play') return 'primero robá';
+      if (s.phase !== 'play') return 'draw first';
       const old = s.melds[team(p)][a.meld];
-      if (!old) return 'juego inválido';
+      if (!old) return 'invalid meld';
       const m = validate([...old.t, ...a.ids], a.low ?? old.low);
-      if (!m) return 'no entra en ese juego';
-      if (!removeFromHand(s, p, a.ids)) return 'fichas inválidas';
+      if (!m) return 'doesn\'t fit that meld';
+      if (!removeFromHand(s, p, a.ids)) return 'invalid tiles';
       s.melds[team(p)][a.meld] = m;
-      s.log = name(s, p) + ' agregó a un juego';
+      say(s, '{0} added to a meld', name(s, p));
       return afterMeld(s, p);
     }
     case 'discard': {
-      if (s.phase !== 'play') return 'primero robá';
-      if (!removeFromHand(s, p, [a.id])) return 'ficha inválida';
+      if (s.phase !== 'play') return 'draw first';
+      if (!removeFromHand(s, p, [a.id])) return 'invalid tile';
       s.pozo.push(a.id);
-      s.log = name(s, p) + ' tiró';
+      say(s, '{0} discarded', name(s, p));
       if (!s.hands[p].length) {
         if (!s.muerto[team(p)] && s.muertos.length) takeMuerto(s, p);
         else if (hasCanasta(s, p)) return endRound(s, p);
-        else return 'necesitás una canasta para cerrar';
+        else return 'you need a canasta to go out';
       }
       s.turn = (p + 1) % seats(s);
       s.phase = 'draw';
@@ -195,14 +198,14 @@ function run(s, p, a) {
       return;
     }
     case 'undo': {
-      if (s.phase !== 'play' || !s.snap) return 'nada para deshacer';
+      if (s.phase !== 'play' || !s.snap) return 'nothing to undo';
       const o = JSON.parse(s.snap);
       s.hands[p] = o.h; s.melds[team(p)] = o.m; s.muerto = o.k; s.muertos = o.d;
-      s.log = name(s, p) + ' deshizo';
+      say(s, '{0} undid', name(s, p));
       return;
     }
   }
-  return 'acción desconocida';
+  return 'unknown action';
 }
 
 // Scores are per team (index 0/1); closer is a seat.
@@ -219,5 +222,5 @@ export function endRound(s, closer) {
   });
   s.phase = 'over';
   s.snap = null;
-  s.log = closer == null ? 'se acabó el mazo' : name(s, closer) + ' cerró';
+  closer == null ? say(s, 'the deck ran out') : say(s, '{0} went out', name(s, closer));
 }
