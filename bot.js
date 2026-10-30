@@ -1,22 +1,26 @@
 // Rule-based bot. botStep returns the next action for seat p using only what that seat can see.
-import {validate, isWild, color, num, value, team, isCanasta} from './game.js?v=2026-10-30.2';
+import {R, validate, isWild, color, num, value, team, isCanasta} from './game.js?v=2026-10-30.3';
 
 const B = {
   pozoMinGain: 1,      // take the pozo if it lets us lay down at least this many more tiles
-  wildMinLen: 5,       // only spend a wild on a meld this long or longer (pushing toward canasta)
+  pozoWildGain: 1,     // each wild in the pozo counts as this many layable tiles
+  pozoDeny: 0.5,       // each pozo tile that fits the rival's melds counts this much toward taking it
   wildNewMeldHand: 5,  // only start a meld with a wild when holding more than this many tiles
-  fitsRivalPenalty: 6, // discard cost when the tile would extend a rival meld
+  dumpWildsHand: 3,    // with this many tiles or fewer, wilds go anywhere (they cost points in hand)
+  feedRival: 6,        // discard cost per tile the pozo would let the rival lay down
+  canastaThreat: 10,   // extra discard cost when the tile grows a rival meld to canasta length
 };
 
 const nat = h => h.filter(i => !isWild(i));
-const wilds = h => h.filter(isWild);
+// Jokers first: they cost more if caught in hand, and 2s may still serve as naturals in runs
+const wilds = h => h.filter(isWild).sort((a, b) => b - a);
 
 // Natural runs and sets of 3+, then pairs completed with one wild.
 export function findMeld(hand, allowWild) {
   const n = nat(hand);
   for (let c = 0; c < 4; c++) {
     const byVal = new Map();
-    for (const i of n.filter(i => color(i) === c)) {
+    for (const i of hand.filter(i => i < 104 && color(i) === c)) {
       byVal.set(num(i), byVal.get(num(i)) ?? i);
       if (num(i) === 1) byVal.set(14, byVal.get(14) ?? i);
     }
@@ -40,11 +44,16 @@ export function findMeld(hand, allowWild) {
   return null;
 }
 
+// Natural adds keep the meld clean (a 2 only goes in as its own number); a wild only completes a canasta or gets dumped.
 function findAdd(hand, melds) {
-  for (const i of nat(hand)) for (let k = 0; k < melds.length; k++) if (validate([...melds[k].t, i])) return {type: 'add', meld: k, ids: [i]};
+  for (const i of hand) for (let k = 0; k < melds.length; k++) {
+    const r = i < 104 && validate([...melds[k].t, i], melds[k].low);
+    if (r && r.w === melds[k].w) return {type: 'add', meld: k, ids: [i]};
+  }
+  const dump = hand.length <= B.dumpWildsHand;
   for (const i of wilds(hand)) for (let k = 0; k < melds.length; k++) {
     const m = melds[k];
-    if (!m.w && m.t.length >= B.wildMinLen && !isCanasta(m) && validate([...m.t, i])) return {type: 'add', meld: k, ids: [i]};
+    if (!m.w && !isCanasta(m) && (dump || m.t.length === R.canastaLen - 1) && validate([...m.t, i], m.low)) return {type: 'add', meld: k, ids: [i]};
   }
   return null;
 }
@@ -63,7 +72,7 @@ function layable(hand, melds) {
   return n;
 }
 
-function discardCost(i, hand, rivalMelds) {
+function discardCost(i, hand, rivalMelds, pozo, fed) {
   if (isWild(i)) return 1e6;
   let c = 0;
   for (const u of hand) {
@@ -72,23 +81,28 @@ function discardCost(i, hand, rivalMelds) {
     if (color(u) === color(i) && d > 0 && d <= 2) c += 3 - d;
     if (num(u) === num(i)) c += 1.5;
   }
-  if (rivalMelds.some(m => validate([...m.t, i]))) c += B.fitsRivalPenalty;
+  c += B.feedRival * (layable([...pozo, i], rivalMelds) - fed);
+  if (rivalMelds.some(m => m.t.length === R.canastaLen - 1 && validate([...m.t, i]))) c += B.canastaThreat;
   return c - value(i) / 30;
 }
 
 export function botStep(s, p) {
   const hand = s.hands[p], mine = s.melds[team(p)], rival = s.melds[1 - team(p)];
-  if (s.phase === 'draw') {
-    const gain = s.pozo.length ? layable([...hand, ...s.pozo], mine) - layable(hand, mine) : 0;
-    return {type: gain >= B.pozoMinGain ? 'pozo' : 'draw'};
-  }
   // Keep one tile to discard unless the hand can empty into the muerto or a close
   const canEmpty = (!s.muerto[team(p)] && s.muertos.length) || mine.some(isCanasta);
   const ok = ids => canEmpty || hand.length - ids.length >= 2;
+  if (s.phase === 'draw') {
+    const keep = canEmpty ? 0 : 2;
+    const gain = s.pozo.length ? Math.min(layable([...hand, ...s.pozo], mine), hand.length + s.pozo.length - keep) - layable(hand, mine)
+      + (hand.length > B.dumpWildsHand ? B.pozoWildGain * s.pozo.filter(isWild).length : 0) + B.pozoDeny * layable(s.pozo, rival) : 0;
+    return {type: gain >= B.pozoMinGain ? 'pozo' : 'draw'};
+  }
   const add = findAdd(hand, mine);
   if (add && ok(add.ids)) return add;
   const m = findMeld(hand, hand.length > B.wildNewMeldHand);
   if (m && ok(m)) return {type: 'meld', ids: m};
-  const best = [...hand].sort((a, b) => discardCost(a, hand, rival) - discardCost(b, hand, rival))[0];
+  const fed = layable(s.pozo, rival);
+  const cost = new Map(hand.map(i => [i, discardCost(i, hand, rival, s.pozo, fed)]));
+  const best = [...hand].sort((a, b) => cost.get(a) - cost.get(b))[0];
   return {type: 'discard', id: best};
 }
