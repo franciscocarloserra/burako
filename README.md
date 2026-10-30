@@ -1,4 +1,6 @@
-# burako
+# p2p burako
+
+<img width="2239" height="1586" alt="Screenshot_20261030_073747" src="https://github.com/user-attachments/assets/a85db78b-ea37-4b62-b1b6-3b9d89384cee" />
 
 Burako de fichas para dos, navegador a navegador (WebRTC vía Trystero/Nostr, sin servidor).
 
