@@ -132,11 +132,11 @@
 <div id="modal"><div id="mbody"></div></div>
 <script type="module">
 window.onerror = window.onunhandledrejection = e => toast('error: ' + (e.reason || e.message || e));
-import {joinRoom} from './trystero-nostr.mjs?v=2026-10-30.1';
-import * as G from './game.js?v=2026-10-30.1';
-import {botStep} from './bot.js?v=2026-10-30.1';
+import {joinRoom} from './trystero-nostr.mjs?v=2026-10-30.2';
+import * as G from './game.js?v=2026-10-30.2';
+import {botStep} from './bot.js?v=2026-10-30.2';
 
-const VERSION = '2026-10-30.1';
+const VERSION = '2026-10-30.2';
 
 // Tunable parameters
 const P = {
@@ -156,6 +156,7 @@ const P = {
   cascadeEvery: 7,      // frames between launches
   dragPx: 8,            // pointer travel before a hand tile starts dragging
   aloneAskMs: 60000,    // alone in an old game this long: offer a new one
+  repoUrl: 'https://github.com/franciscocarloserra/burako',
 };
 // UI text is English; ES maps each English string to Spanish for Spanish browsers
 const ES = {
@@ -513,6 +514,8 @@ function askAlone() {
   $('modal').className = 'on';
 }
 
+const logo = () => Object.assign(document.createElement('img'), {src: 'logo.webp', alt: 'Burako', style: 'width:min(60%,220px);align-self:center'});
+
 function askName() {
   const i = Object.assign(document.createElement('input'), {placeholder: t('your name'), maxLength: 20});
   const b = Object.assign(document.createElement('button'), {textContent: t('Play')});
@@ -522,7 +525,7 @@ function askName() {
     myName = n; localStorage.setItem('burako:name', n); $('modal').className = '';
     start();
   };
-  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: 'Burako'}), i, b);
+  $('mbody').replaceChildren(logo(), i, b);
   $('modal').className = 'on';
   i.focus();
 }
@@ -607,11 +610,12 @@ setInterval(status, 3000);
 
 function menu() {
   const opts = [['Online with link', rand() + ':' + rand()], ['Practice vs bot', 'solo'], ['2 vs 2 with bots', '2v2']];
-  $('mbody').replaceChildren(Object.assign(document.createElement('b'), {textContent: 'Burako'}), ...opts.map(([l, h]) => {
+  $('mbody').replaceChildren(logo(), ...opts.map(([l, h]) => {
     const b = Object.assign(document.createElement('button'), {textContent: t(l)});
     b.onclick = () => location.hash = h;
     return b;
-  }));
+  }), Object.assign(document.createElement('a'), {href: P.repoUrl, target: '_blank', rel: 'noopener', textContent: 'github',
+    style: 'font-size:11px;color:#fff6;text-align:center;text-decoration:none'}));
   $('modal').className = 'on';
 }
 

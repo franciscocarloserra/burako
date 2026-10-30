@@ -1,5 +1,7 @@
 # p2p burako
 
+<img src="logo.webp" width="160" alt="">
+
 <img width="2239" height="1586" alt="Screenshot_20261030_073747" src="https://github.com/user-attachments/assets/a85db78b-ea37-4b62-b1b6-3b9d89384cee" />
 
 Two-player (or 2 vs 2 with bots) tile Burako, browser to browser (WebRTC via Trystero/Nostr, no server). The UI is in English, or Spanish if the browser language is Spanish.
